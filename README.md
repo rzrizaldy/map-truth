@@ -92,11 +92,12 @@ PNG exports are exactly 2400×3000. SVG exports use a 1200×1500 viewBox and emb
 
 ## Deployment
 
-Source: [github.com/rzrizaldy/map-truth](https://github.com/rzrizaldy/map-truth)
+- **GitHub:** [github.com/rzrizaldy/map-truth](https://github.com/rzrizaldy/map-truth)
+- **Live site:** [map-truth.vercel.app](https://map-truth.vercel.app)
 
 GitHub Actions runs lint, typecheck, unit tests, production build, and Playwright on every push and pull request to `main`.
 
-Vercel deploys previews from pull requests and production from `main`. `vercel.ts` configures the Vite build, static security headers, same-origin WebMCP permissions, and the optional origin-trial header. Vercel AI Gateway should use project OIDC; never commit an API key or expose one through a `VITE_` variable.
+Vercel project: `rzrizaldys-projects/map-truth`. Connect the GitHub repo in the Vercel dashboard if automatic deploys on push are not yet wired. For the GPT Image taste test in production, add **`OPENAI_API_KEY`** under Project → Settings → Environment Variables (Production). `vercel.ts` configures the Vite build, static security headers, same-origin WebMCP permissions, and the optional origin-trial header. Never expose an API key through a `VITE_` variable.
 
 ```bash
 vercel login
