@@ -2,10 +2,12 @@ import { routes, type VercelConfig } from '@vercel/config/v1'
 
 const originTrialToken = process.env.WEBMCP_ORIGIN_TRIAL_TOKEN
 
-const connectSrc = "'self' https://tiles.openfreemap.org https://*.openfreemap.org"
+const openFreeMap = 'https://tiles.openfreemap.org https://*.openfreemap.org'
+const connectSrc = `'self' ${openFreeMap}`
+const imgSrc = `'self' data: blob: ${openFreeMap}`
 
 const securityHeaders = [
-  { key: 'Content-Security-Policy', value: `default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src ${connectSrc}; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'` },
+  { key: 'Content-Security-Policy', value: `default-src 'self'; img-src ${imgSrc}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' blob:; connect-src ${connectSrc}; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'` },
   { key: 'Permissions-Policy', value: 'tools=(self)' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },

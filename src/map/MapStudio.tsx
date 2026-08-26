@@ -66,10 +66,10 @@ export function MapStudio({ mode, captureRef }: MapStudioProps) {
   const featureCount = useAppStore((state) => state.data.features.length)
   const selection = useAppStore((state) => state.selection)
   const features = useAppStore((state) => state.data.features)
+  const mapReady = mode === 'demo' || dataStatus === 'ready'
 
   useEffect(() => {
-    if (!containerRef.current) return
-    if (mode === 'about' && dataStatus !== 'ready') return
+    if (!containerRef.current || !mapReady) return
 
     const state = appStore.getState()
     const map: MapLibreMap = new maplibregl.Map({
@@ -93,8 +93,13 @@ export function MapStudio({ mode, captureRef }: MapStudioProps) {
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
 
+    const onResize = () => map.resize()
+    window.addEventListener('resize', onResize)
+    requestAnimationFrame(onResize)
+
     map.on('load', () => {
       mapElement.dataset.mapLoaded = 'true'
+      onResize()
 
       if (mode === 'about') {
         map.addSource('osm', { type: 'geojson', data: '/data/demo-area.geojson' })
@@ -134,10 +139,15 @@ export function MapStudio({ mode, captureRef }: MapStudioProps) {
         if (!appStore.getState().selection) {
           setSelection({ type: 'Feature', properties: { source: 'maptruth-demo' }, geometry: demoRoute })
         }
-        map.once('idle', () => {
+        const reportFragments = () => {
+          if (mapElement.dataset.featureCount) return
           const loaded = map.querySourceFeatures('osm').length
           mapElement.dataset.featureCount = String(loaded)
           addActivity('map', loaded ? 'ok' : 'error', `${loaded.toLocaleString()} source fragments painted by MapLibre`)
+        }
+        map.once('idle', reportFragments)
+        map.on('sourcedata', (event) => {
+          if (event.sourceId === 'osm' && event.isSourceLoaded) reportFragments()
         })
       } else {
         addActivity('map', 'ok', 'Worldwide OSM vector basemap ready — zoom in and set boundary')
@@ -158,11 +168,12 @@ export function MapStudio({ mode, captureRef }: MapStudioProps) {
 
     captureRef.current = () => map.getCanvas().toDataURL('image/png')
     return () => {
+      window.removeEventListener('resize', onResize)
       captureRef.current = null
       map.remove()
       mapRef.current = null
     }
-  }, [mode, dataStatus, captureRef])
+  }, [mode, mapReady, captureRef])
 
   useEffect(() => {
     if (mode !== 'demo' || !mapRef.current?.isStyleLoaded()) return
