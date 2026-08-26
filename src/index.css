@@ -1,0 +1,26 @@
+:root {
+  font-family: 'Source Sans 3', sans-serif;
+  color: #141512;
+  background: #f2e7cf;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --paper: #f2e7cf;
+  --ink: #141512;
+  --red: #d43d28;
+  --asphalt: #62645d;
+  --white: #fff9ec;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper); }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+::selection { background: var(--red); color: var(--white); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
