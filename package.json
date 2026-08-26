@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:vercel": "vercel dev",
-    "build": "tsc -b && vite build",
+    "build": "npm run maplibre:copy && tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "data:prepare": "bash scripts/prepare-osm.sh",
-    "data:normalize": "node scripts/normalize-osm.mjs"
+    "data:normalize": "node scripts/normalize-osm.mjs",
+    "maplibre:copy": "mkdir -p public/maplibre && cp node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs public/maplibre/"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.47",

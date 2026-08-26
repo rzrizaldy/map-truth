@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client'
 import * as maplibregl from 'maplibre-gl'
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import '@fontsource/barlow-condensed/latin-600.css'
 import '@fontsource/barlow-condensed/latin-700.css'
 import '@fontsource/source-sans-3/latin-400.css'
@@ -11,6 +10,6 @@ import '@watergis/maplibre-gl-terradraw/dist/maplibre-gl-terradraw.css'
 import './index.css'
 import App from './App.tsx'
 
-maplibregl.setWorkerUrl(maplibreWorkerUrl)
+maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs')
 
 createRoot(document.getElementById('root')!).render(<App />)
