@@ -12,6 +12,7 @@ const source: SourceFeature = {
 
 beforeEach(() => {
   appStore.setState({
+    place: { name: 'Test place', source: 'bundled' },
     data: { status: 'ready', features: [source] },
     map: { center: [106.81, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: undefined,

@@ -169,7 +169,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         {sourceMode ? 'Neutral rendering — same IDs, bounds, projection, and hashes' : spec.subtitle}
       </text>
       <text x="67" y="260" className="poster-mono" fontSize="15" letterSpacing="0.12em" fill={sourceMode ? '#62645D' : palette.accent}>
-        CENTRAL JAKARTA — SENAYAN  /  {frameCode}
+        {sourceMode ? 'NEUTRAL SOURCE VIEW' : state.place.name.toUpperCase()}  /  {frameCode}
       </text>
 
       <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#62645D' : palette.ink} />

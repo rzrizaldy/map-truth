@@ -51,11 +51,17 @@ export type GeneratedComparison = {
 
 export type ComparisonMode = 'poster' | 'source' | 'split' | 'overlay'
 
+export type PlaceSource = 'none' | 'bundled' | 'overpass'
+
 export type MapTruthState = {
   data: {
     status: 'idle' | 'loading' | 'ready' | 'error'
     features: SourceFeature[]
     error?: string
+  }
+  place: {
+    name: string
+    source: PlaceSource
   }
   map: {
     center: [number, number]

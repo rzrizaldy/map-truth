@@ -24,6 +24,7 @@ const feature = (id: string, coordinates: [number, number]): SourceFeature => ({
 
 beforeEach(() => {
   appStore.setState({
+    place: { name: 'Central Jakarta–Senayan', source: 'bundled' },
     data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.85, -6.16])] },
     map: { center: [106.82, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: { kind: 'route', id: 'human:route', geometry: route, geometryHash: hashGeometrySync(route) },

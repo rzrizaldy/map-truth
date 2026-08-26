@@ -2,9 +2,15 @@
 
 [![CI](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml)
 
-MapTruth is a browser-native studio for making expressive map art without allowing the art process to redraw the geography. It combines a pinned OpenStreetMap-derived extract, human-drawn route or area geometry, deterministic SVG rendering, and five WebMCP tools.
+MapTruth is a thin WebMCP demo for ChatGPT in Chrome: pan a worldwide OpenStreetMap vector map, lock a boundary, write one prompt, and compare three GPT Image routes—blind, screenshot, and geometry-locked OSM vectors.
 
-The Central Jakarta–Senayan demo connects Monas, DPR/MPR, Gelora Bung Karno, major roads, parks, and canals. It uses no remote map tiles, live Overpass dependency, account system, or client-side secret.
+## Pages
+
+- **`/`** — Landing with the three-level thesis and CTA to the demo
+- **`/demo`** — Worldwide OSM vector map starting in New York. Set boundary → prompt → three posters. WebMCP tools register here.
+- **`/about`** — Long-form Jakarta verification studio (pinned extract, truth seam, manual fallback, taste test)
+
+The About page keeps the Central Jakarta–Senayan pinned extract for deep verification. The demo fetches live OpenStreetMap vectors through `/api/osm-extract` when you lock a viewport.
 
 ## Three-way GPT Image demo
 
@@ -39,8 +45,9 @@ Vercel production: add `OPENAI_API_KEY` in the project Environment Variables das
 
 ## WebMCP tools
 
-The page feature-detects `document.modelContext` and registers:
+The page feature-detects `document.modelContext` and registers on `/demo` and `/about`:
 
+- `lock_map_boundary`
 - `get_map_context`
 - `get_drawn_geometry`
 - `render_grounded_poster`

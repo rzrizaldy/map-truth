@@ -1,4 +1,6 @@
 import type { LineString, Polygon, Position } from 'geojson'
+import { bboxSpanOk } from '../map/boundary'
+import { fetchOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
 import { hashGeometry } from '../lib/hash'
 import { exportArtwork } from '../poster/export'
@@ -58,7 +60,8 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
   addActivity('get_map_context', 'ok', `${contextFeatures.length} source-backed features in context`)
   return {
     status: 'ok',
-    place: 'Central Jakarta–Senayan',
+    place: state.place.name,
+    placeSource: state.place.source,
     bbox: state.map.bbox.map((value) => Number(value.toFixed(6))),
     hasSelection: Boolean(state.selection),
     hasDrawnRoute: state.selection?.kind === 'route',
@@ -71,11 +74,11 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
 export const getDrawnGeometry = (): ToolResult => {
   const selection = appStore.getState().selection
   if (!selection) {
-    addActivity('get_drawn_geometry', 'needs_user_action', 'No route or area has been drawn')
+    addActivity('get_drawn_geometry', 'needs_user_action', 'No boundary has been locked yet')
     return {
       status: 'needs_user_action',
       reason: 'no_drawn_geometry',
-      suggestedAction: 'draw_route_or_select_area',
+      suggestedAction: 'lock_map_boundary',
     }
   }
   addActivity('get_drawn_geometry', 'ok', `Returned human-drawn ${selection.kind}`)
@@ -127,11 +130,19 @@ const isToolError = (value: RenderPosterInput | ToolResult): value is ToolResult
 export const renderGroundedPoster = (input: unknown): ToolResult => {
   const state = appStore.getState()
   if (!state.selection) {
-    addActivity('render_grounded_poster', 'needs_user_action', 'Select an area or draw a route first')
+    addActivity('render_grounded_poster', 'needs_user_action', 'Lock a map boundary first')
     return {
       status: 'needs_user_action',
       reason: 'no_area_selected',
-      suggestedAction: 'draw_route_or_select_area',
+      suggestedAction: 'lock_map_boundary',
+    }
+  }
+  if (state.data.status !== 'ready' || !state.data.features.length) {
+    addActivity('render_grounded_poster', 'needs_user_action', 'OpenStreetMap extract not loaded')
+    return {
+      status: 'needs_user_action',
+      reason: 'no_area_selected',
+      suggestedAction: 'lock_map_boundary',
     }
   }
   const validated = validatePosterInput(input)
@@ -227,5 +238,33 @@ export const exportGroundedArtwork = async (input: { format?: unknown }): Promis
   } catch (error) {
     addActivity('export_artwork', 'error', 'Export failed')
     return { status: 'error', reason: 'export_failed', details: String(error) }
+  }
+}
+
+export const lockMapBoundary = async (): Promise<ToolResult> => {
+  const { map } = appStore.getState()
+  if (!bboxSpanOk(map.bbox)) {
+    addActivity('lock_map_boundary', 'needs_user_action', 'Viewport is too large — zoom in')
+    return {
+      status: 'needs_user_action',
+      reason: 'bbox_too_large',
+      suggestedAction: 'zoom_in',
+    }
+  }
+
+  const result = await fetchOsmExtract(map.bbox)
+  if (!result.ok) {
+    return {
+      status: 'needs_user_action',
+      reason: result.reason,
+      suggestedAction: result.suggestedAction ?? 'zoom_in',
+    }
+  }
+
+  return {
+    status: 'ok',
+    featureCount: result.featureCount,
+    place: result.place,
+    geographySource: 'openstreetmap_overpass',
   }
 }

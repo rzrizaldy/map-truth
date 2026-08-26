@@ -12,6 +12,12 @@ export const GET_DRAWN_GEOMETRY_SCHEMA = {
   additionalProperties: false,
 } as const
 
+export const LOCK_MAP_BOUNDARY_SCHEMA = {
+  type: 'object',
+  properties: {},
+  additionalProperties: false,
+} as const
+
 export const RENDER_POSTER_SCHEMA = {
   type: 'object',
   properties: {
@@ -46,4 +52,3 @@ export const EXPORT_ARTWORK_SCHEMA = {
   required: ['format'],
   additionalProperties: false,
 } as const
-

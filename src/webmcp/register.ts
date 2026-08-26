@@ -3,6 +3,7 @@ import {
   exportGroundedArtwork,
   getDrawnGeometry,
   getMapContext,
+  lockMapBoundary,
   renderGroundedPoster,
   verifyGeography,
 } from './commands'
@@ -10,6 +11,7 @@ import {
   EXPORT_ARTWORK_SCHEMA,
   GET_DRAWN_GEOMETRY_SCHEMA,
   GET_MAP_CONTEXT_SCHEMA,
+  LOCK_MAP_BOUNDARY_SCHEMA,
   RENDER_POSTER_SCHEMA,
   VERIFY_GEOGRAPHY_SCHEMA,
 } from './schemas'
@@ -30,6 +32,17 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
   const controller = new AbortController()
   try {
     await Promise.all([
+      document.modelContext.registerTool(
+        {
+          name: 'lock_map_boundary',
+          title: 'Lock map boundary',
+          description: 'Lock geography to the current map viewport and fetch OpenStreetMap vectors for that area. Never accepts coordinates from the agent.',
+          inputSchema: LOCK_MAP_BOUNDARY_SCHEMA,
+          annotations: { readOnlyHint: false, untrustedContentHint: false },
+          execute: () => lockMapBoundary(),
+        },
+        { signal: controller.signal },
+      ),
       document.modelContext.registerTool(
         {
           name: 'get_map_context',
@@ -91,7 +104,7 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         ...state.ui,
         webmcpAvailable: true,
         webmcpStatus: 'available',
-        webmcpMessage: 'Five MapTruth tools are registered in this page.',
+        webmcpMessage: 'Six MapTruth tools are registered on this page.',
       },
     }))
   } catch (error) {

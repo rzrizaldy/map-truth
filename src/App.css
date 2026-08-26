@@ -49,6 +49,7 @@ main { width: min(1600px, 100%); margin: 0 auto; overflow: hidden; border-inline
 .panel-heading { height: 65px; padding: 13px 16px; display: flex; flex-direction: column; justify-content: space-between; border-bottom: 1px solid var(--ink); background: var(--paper); }
 .panel-heading strong { font: 700 22px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
 .map-shell { position: relative; height: 690px; background: var(--paper); }
+.map-shell--demo { height: min(72vh, 760px); }
 .map-canvas { position: absolute; inset: 40px 0 0; }
 .map-meta { position: absolute; inset: 0 0 auto; height: 40px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; z-index: 2; font: 500 10px/1 'IBM Plex Mono', monospace; border-bottom: 1px solid rgba(20,21,18,.4); background: var(--white); }
 .map-meta span { color: var(--asphalt); }
@@ -101,6 +102,18 @@ main { width: min(1600px, 100%); margin: 0 auto; overflow: hidden; border-inline
 .risk-tag { display: inline-flex; margin-top: 15px; padding: 7px 9px; border: 1px solid currentColor; font: 500 10px/1 'IBM Plex Mono', monospace; text-transform: uppercase; }
 .risk-tag--high { color: #f08c7d; }.risk-tag--medium { color: #e4c377; }.risk-tag--locked { color: #b8d48e; }
 .taste-footnote { max-width: 800px; margin: 26px 0 0; color: #a8a69e; font-size: 14px; }
+
+.demo-section { padding: 48px 42px 72px; background: #ded8c9; border-bottom: 1px solid var(--ink); }
+.demo-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.demo-toolbar-note { font: 500 11px/1.4 'IBM Plex Mono', monospace; color: var(--asphalt); }
+.demo-map-stage { border: 1px solid var(--ink); background: var(--white); margin-bottom: 28px; }
+.demo-map-stage .map-shell--demo { height: min(72vh, 760px); }
+.demo-map-stage .map-shell--demo .map-canvas { inset: 40px 0 0; }
+.demo-verify-stage { border: 1px solid var(--ink); background: var(--white); margin-top: 28px; }
+.demo-verify-stage .truth-seam { max-height: 640px; }
+.taste-intro--demo { align-items: end; }
+.landing-secondary { margin-top: 18px; font-size: 15px; }
+.landing-secondary a { color: var(--ink); }
 
 footer { padding: 40px 42px; background: var(--red); color: var(--white); display: flex; align-items: end; justify-content: space-between; gap: 30px; }
 footer strong { font: 700 34px/1 'Barlow Condensed', sans-serif; }
