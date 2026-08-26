@@ -29,11 +29,13 @@ The server-side image endpoint needs the Vercel development runtime:
 
 ```bash
 cp .env.example .env.local
-# Set AI_GATEWAY_API_KEY in .env.local
+# Set OPENAI_API_KEY in .env.local for direct OpenAI GPT Image calls
 vercel dev
 ```
 
-Vercel deployments use project OIDC for AI Gateway and should not need a committed key. Never expose an AI Gateway or OpenAI key through a `VITE_` variable.
+When `OPENAI_API_KEY` is set, the API uses the OpenAI provider directly. Otherwise it uses Vercel AI Gateway (`openai/gpt-image-2`) with `AI_GATEWAY_API_KEY` or project OIDC on Vercel.
+
+Vercel production: add `OPENAI_API_KEY` in the project Environment Variables dashboard (Production). Never expose an API key through a `VITE_` variable.
 
 ## WebMCP tools
 

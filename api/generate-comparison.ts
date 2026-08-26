@@ -1,6 +1,14 @@
-import { generateImage, NoImageGeneratedError } from 'ai'
+import { createOpenAI } from '@ai-sdk/openai'
+import { generateImage, NoImageGeneratedError, type ImageModel } from 'ai'
 
 export const config = { maxDuration: 300 }
+
+const IMAGE_MODEL_ID = 'gpt-image-2' as const
+
+const imageModel = (): ImageModel | `${string}/${string}` =>
+  process.env.OPENAI_API_KEY
+    ? createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).image(IMAGE_MODEL_ID)
+    : 'openai/gpt-image-2'
 
 type ComparisonRequest = {
   prompt?: unknown
@@ -36,15 +44,16 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   try {
+    const model = imageModel()
     const [promptOnly, screenshotGrounded, mapTruthArtLayer] = await Promise.all([
       generateImage({
-        model: 'openai/gpt-image-2',
+        model,
         prompt: `${prompt}\nCreate a complete polished map poster from the prompt alone.`,
         size: '1024x1536',
         abortSignal: AbortSignal.timeout(240_000),
       }),
       generateImage({
-        model: 'openai/gpt-image-2',
+        model,
         prompt: {
           text: `${prompt}\nUse the attached source-map screenshot as visual reference and redesign it as a polished poster.`,
           images: [sourceImage],
@@ -53,7 +62,7 @@ export default async function handler(request: Request): Promise<Response> {
         abortSignal: AbortSignal.timeout(240_000),
       }),
       generateImage({
-        model: 'openai/gpt-image-2',
+        model,
         prompt:
           `Generate only a non-geographic art layer for a 2:3 editorial poster. ${prompt}\n` +
           `Context: ${mapSummary}. Use paper texture, ink fields, framing devices, and abstract civic-print energy. ` +
