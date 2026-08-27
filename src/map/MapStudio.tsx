@@ -112,6 +112,18 @@ const boundsTuple = (map: MapLibreMap): [number, number, number, number] => {
   return [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]
 }
 
+const captureMapScreenshot = (map: MapLibreMap) => {
+  const source = map.getCanvas()
+  const scale = Math.min(1, 1_280 / source.width, 900 / source.height)
+  const screenshot = document.createElement('canvas')
+  screenshot.width = Math.max(1, Math.round(source.width * scale))
+  screenshot.height = Math.max(1, Math.round(source.height * scale))
+  const context = screenshot.getContext('2d')
+  if (!context) throw new Error('screenshot_context_unavailable')
+  context.drawImage(source, 0, 0, screenshot.width, screenshot.height)
+  return screenshot.toDataURL('image/jpeg', 0.82)
+}
+
 export function MapStudio({ mode }: MapStudioProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
@@ -179,7 +191,7 @@ export function MapStudio({ mode }: MapStudioProps) {
     }
 
     const unregisterRuntime = registerMapRuntime({
-      capture: () => map.getCanvas().toDataURL('image/png'),
+      capture: () => captureMapScreenshot(map),
       lockLiveOsm,
       navigate: async (center, zoom) => {
         invalidateOnMoveEnd = true

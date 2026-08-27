@@ -1,5 +1,5 @@
-import { bboxSpanOk, formatPlaceLabel } from '../src/map/boundary'
-import { normalizeOverpassElements, type OverpassElement } from '../src/osm/normalize'
+import { bboxSpanOk, formatPlaceLabel } from '../src/map/boundary.js'
+import { normalizeOverpassElements, type OverpassElement } from '../src/osm/normalize.js'
 
 export const config = { maxDuration: 30 }
 

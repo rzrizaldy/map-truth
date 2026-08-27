@@ -29,6 +29,14 @@ describe('independent gpt-image-2 route endpoint', () => {
     expect(generateImage).not.toHaveBeenCalled()
   })
 
+  it('accepts a bounded JPEG basemap capture', async () => {
+    const response = await handler(request({
+      route: 'screenshotGrounded', prompt: 'Poster', sourceImageDataUrl: 'data:image/jpeg;base64,aA==',
+    }))
+    expect(response.status).toBe(200)
+    expect(generateImage).toHaveBeenCalledTimes(1)
+  })
+
   it('uses the screenshot only as art context for MapTruth-grounded output', async () => {
     const response = await handler(request({
       route: 'mapTruthGrounded', prompt: 'Civic print', sourceImageDataUrl: 'data:image/png;base64,aA==', mapSummary: '{"lock":"live"}',

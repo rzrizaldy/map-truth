@@ -20,8 +20,8 @@ export type GenerateRouteInput = {
 export const isImageRoute = (value: unknown): value is ImageRoute =>
   typeof value === 'string' && IMAGE_ROUTES.includes(value as ImageRoute)
 
-export const validPngDataUrl = (value: string | undefined) =>
-  Boolean(value?.startsWith('data:image/png;base64,') && value.length <= 10_000_000)
+export const validSourceImageDataUrl = (value: string | undefined) =>
+  Boolean(value && /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/]+=*$/i.test(value) && value.length <= 3_500_000)
 
 const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary }: GenerateRouteInput) => {
   if (route === 'promptOnly') {

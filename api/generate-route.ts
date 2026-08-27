@@ -3,8 +3,8 @@ import {
   IMAGE_MODEL_LABEL,
   imageGenerationError,
   isImageRoute,
-  validPngDataUrl,
-} from './image-generation'
+  validSourceImageDataUrl,
+} from './image-generation.js'
 
 export const config = { maxDuration: 300 }
 
@@ -34,7 +34,7 @@ export default async function handler(request: Request): Promise<Response> {
   const sourceImageDataUrl = typeof body.sourceImageDataUrl === 'string' ? body.sourceImageDataUrl : undefined
   const mapSummary = typeof body.mapSummary === 'string' ? body.mapSummary.trim().slice(0, 1_200) : undefined
   if (!prompt) return json({ error: 'prompt_required' }, { status: 400 })
-  if (body.route !== 'promptOnly' && !validPngDataUrl(sourceImageDataUrl)) {
+  if (body.route !== 'promptOnly' && !validSourceImageDataUrl(sourceImageDataUrl)) {
     return json({ error: 'valid_source_screenshot_required' }, { status: 400 })
   }
   if (body.route === 'mapTruthGrounded' && !mapSummary) {

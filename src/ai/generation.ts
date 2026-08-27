@@ -70,7 +70,13 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
         mapSummary: route === 'mapTruthGrounded' ? compactMapSummary() : undefined,
       }),
     })
-    const payload = await response.json() as { image?: string; error?: string; detail?: string; durationMs?: number }
+    const responseText = await response.text()
+    let payload: { image?: string; error?: string; detail?: string; durationMs?: number } = {}
+    try {
+      payload = JSON.parse(responseText) as typeof payload
+    } catch {
+      if (!response.ok) throw new Error(responseText.replace(/\s+/g, ' ').trim().slice(0, 180) || `Request failed (${response.status})`)
+    }
     if (!response.ok || !payload.image) throw new Error(payload.detail ?? payload.error ?? `Request failed (${response.status})`)
     const durationMs = Date.now() - startedAt
     setRoute(route, { status: 'ready', imageDataUrl: payload.image, error: undefined, durationMs })

@@ -18,7 +18,7 @@ describe('GPT Image comparison endpoint validation', () => {
     expect(await response.json()).toEqual({ error: 'method_not_allowed' })
   })
 
-  it('requires a real PNG source screenshot', async () => {
+  it('requires a real bounded source screenshot', async () => {
     const response = await handler(new Request('http://localhost/api/generate-comparison', {
       method: 'POST',
       body: JSON.stringify({ prompt: 'Jakarta poster', sourceImageDataUrl: 'not-an-image' }),
