@@ -4,7 +4,22 @@ import { extractPlaceMentions, promptMatchesPlace } from './places'
 describe('prompt place extraction', () => {
   it('finds the places in the demo prompt, shorthands included', () => {
     const mentions = extractPlaceMentions('Jakarta map overlay with a hypothetical NYC + NJ region based on vibes.')
-    expect(mentions.map((mention) => mention.query)).toEqual(['Jakarta', 'New York City', 'New Jersey'])
+    expect(mentions.map((mention) => mention.query).sort()).toEqual(['Jakarta', 'New Jersey', 'New York City'])
+  })
+
+  it('does not mistake a style adjective for a destination', () => {
+    const mentions = extractPlaceMentions('A 1970s Swiss travel poster of Kyoto in autumn')
+    expect(mentions[0].query).toBe('Kyoto')
+    expect(mentions.map((mention) => mention.query)).not.toContain('Swiss')
+  })
+
+  it('still allows a style word that is genuinely the subject', () => {
+    expect(extractPlaceMentions('A poster of Swiss mountain villages').map((m) => m.query)).toContain('Swiss')
+  })
+
+  it('puts the place the sentence points at first', () => {
+    const mentions = extractPlaceMentions('Bauhaus poster of Rotterdam')
+    expect(mentions[0].query).toBe('Rotterdam')
   })
 
   it('keeps multi-word place names together', () => {

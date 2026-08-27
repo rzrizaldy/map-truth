@@ -33,7 +33,20 @@ const STOPWORDS = new Set([
   'gpt', 'image', 'ai', 'if', 'it', 'had', 'has', 'lived', 'here', 'were', 'was', 'be',
 ])
 
-export type PlaceMention = { text: string; query: string }
+// Style words that look exactly like places. "A 1970s Swiss travel poster of
+// Kyoto" is about Kyoto; offering to fly the map to Switzerland is wrong.
+const STYLE_WORDS = new Set([
+  'swiss', 'french', 'italian', 'japanese', 'german', 'dutch', 'spanish', 'greek',
+  'nordic', 'scandinavian', 'american', 'british', 'english', 'soviet', 'russian',
+  'chinese', 'korean', 'indian', 'persian', 'moroccan', 'brazilian', 'mexican',
+  'bauhaus', 'deco', 'nouveau', 'victorian', 'edwardian', 'gothic', 'baroque',
+  'brutalist', 'modernist', 'retro', 'vintage', 'classic', 'contemporary',
+])
+
+// A place named after one of these is the subject, not a flourish.
+const LOCATIVE = new Set(['of', 'in', 'at', 'from', 'around', 'near', 'over', 'across', 'through'])
+
+export type PlaceMention = { text: string; query: string; strong: boolean }
 
 const titleCased = (word: string) => /^[A-Z][a-z'’-]+$/.test(word)
 const acronym = (word: string) => /^[A-Z]{2,5}$/.test(word)
@@ -51,11 +64,11 @@ export const extractPlaceMentions = (prompt: string, limit = 4): PlaceMention[] 
   const found: PlaceMention[] = []
   const seen = new Set<string>()
 
-  const push = (text: string, query: string) => {
+  const push = (text: string, query: string, strong: boolean) => {
     const key = query.toLowerCase()
-    if (seen.has(key) || found.length >= limit) return
+    if (seen.has(key)) return
     seen.add(key)
-    found.push({ text, query })
+    found.push({ text, query, strong })
   }
 
   for (let index = 0; index < words.length; index += 1) {
@@ -63,11 +76,17 @@ export const extractPlaceMentions = (prompt: string, limit = 4): PlaceMention[] 
     if (!bare) continue
     const lower = bare.toLowerCase()
 
+    const previous = index > 0 ? words[index - 1].replace(/[.,]+$/, '').toLowerCase() : ''
+    const strong = LOCATIVE.has(previous)
+
     if (ALIASES[lower] && (acronym(bare) || titleCased(bare))) {
-      push(bare, ALIASES[lower])
+      push(bare, ALIASES[lower], strong)
       continue
     }
     if (STOPWORDS.has(lower)) continue
+    // A style word only counts as a place when the sentence puts it in a
+    // locative slot ("a poster of Swiss villages").
+    if (STYLE_WORDS.has(lower) && !strong) continue
 
     if (titleCased(bare)) {
       // Greedily absorb following capitalised words: "New York City", "Kuala Lumpur".
@@ -81,13 +100,14 @@ export const extractPlaceMentions = (prompt: string, limit = 4): PlaceMention[] 
       }
       index = ahead - 1
       const phrase = parts.join(' ')
-      push(phrase, phrase)
+      push(phrase, phrase, strong)
       continue
     }
-    if (acronym(bare) && !STOPWORDS.has(lower)) push(bare, bare)
+    if (acronym(bare) && !STOPWORDS.has(lower)) push(bare, bare, strong)
   }
 
-  return found
+  // A place the sentence points at outranks one merely mentioned.
+  return [...found].sort((a, b) => Number(b.strong) - Number(a.strong)).slice(0, limit)
 }
 
 /**

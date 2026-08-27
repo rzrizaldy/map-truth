@@ -232,11 +232,28 @@ export function MapStudio() {
       mapElement.dataset.mapError = message
       addActivity('map', 'error', message, { source: 'system' })
     })
+
+    // If the basemap style itself never arrives — slow venue wifi, a blocked
+    // tile host — the page would otherwise sit forever behind a disabled
+    // button with nothing to explain it.
+    const styleWatchdog = window.setTimeout(() => {
+      if (map.isStyleLoaded()) return
+      mapElement.dataset.mapError = 'style_timeout'
+      appStore.setState((state) => ({
+        data: {
+          ...state.data,
+          status: state.data.features.length ? state.data.status : 'error',
+          error: 'The map is taking unusually long to load. Check your connection, then reload.',
+        },
+      }))
+      addActivity('map', 'error', 'Basemap style did not load in time', { source: 'system' })
+    }, 20_000)
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     const resize = () => map.resize()
     window.addEventListener('resize', resize)
 
     map.on('load', () => {
+      window.clearTimeout(styleWatchdog)
       addLockOverlay(map)
       resize()
       // A stalled tile request must not leave the studio permanently disabled:
@@ -282,6 +299,7 @@ export function MapStudio() {
     })
 
     return () => {
+      window.clearTimeout(styleWatchdog)
       window.removeEventListener('resize', resize)
       unregisterRuntime()
       map.remove()
