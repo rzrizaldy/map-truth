@@ -1,0 +1,103 @@
+import type { GeocodedPlace } from '../src/map/placeTypes.js'
+
+export const config = { maxDuration: 30 }
+
+type GeocodeRequest = { query?: unknown; center?: unknown }
+
+type NominatimPlace = {
+  display_name?: string
+  name?: string
+  lat?: string
+  lon?: string
+  boundingbox?: [string, string, string, string]
+  addresstype?: string
+  type?: string
+}
+
+
+const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
+  ...init,
+  // Geocoding the same place repeatedly is wasteful and Nominatim asks callers
+  // to cache; a day is far shorter than a city moves.
+  headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=86400', ...init.headers },
+})
+
+const CONTACT = 'MapTruth/1.0 (https://map-truth.vercel.app)'
+
+// Nominatim returns a bbox for every result. Turning it into a zoom keeps the
+// locked viewport tight enough that `lock_live_osm` sees real detail.
+export const zoomForBbox = ([west, south, east, north]: [number, number, number, number]) => {
+  const span = Math.max(east - west, (north - south) * 1.6)
+  if (!Number.isFinite(span) || span <= 0) return 14
+  const zoom = Math.log2(360 / span) + 0.4
+  return Math.min(16, Math.max(10, Number(zoom.toFixed(2))))
+}
+
+export const toGeocodedPlace = (place: NominatimPlace): GeocodedPlace | null => {
+  const latitude = Number(place.lat)
+  const longitude = Number(place.lon)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  const box = place.boundingbox?.map(Number)
+  const bbox: [number, number, number, number] = box && box.length === 4 && box.every(Number.isFinite)
+    ? [box[2], box[0], box[3], box[1]]
+    : [longitude - 0.05, latitude - 0.04, longitude + 0.05, latitude + 0.04]
+  const label = place.display_name ?? place.name ?? 'Unnamed place'
+  return {
+    name: place.name || label.split(',')[0].trim(),
+    label,
+    center: [longitude, latitude],
+    bbox,
+    zoom: zoomForBbox(bbox),
+    kind: place.addresstype ?? place.type ?? 'place',
+  }
+}
+
+const nominatim = async (path: string) => {
+  const response = await fetch(`https://nominatim.openstreetmap.org${path}`, {
+    headers: { 'User-Agent': CONTACT, Referer: 'https://map-truth.vercel.app', Accept: 'application/json' },
+    signal: AbortSignal.timeout(12_000),
+  })
+  if (!response.ok) throw new Error(`nominatim_http_${response.status}`)
+  return response.json() as Promise<unknown>
+}
+
+export async function POST(request: Request): Promise<Response> {
+  let body: GeocodeRequest
+  try {
+    body = (await request.json()) as GeocodeRequest
+  } catch {
+    return json({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  // Reverse: turn a locked viewport into a human place name.
+  if (Array.isArray(body.center)) {
+    const [longitude, latitude] = body.center.map(Number)
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      return json({ error: 'invalid_center' }, { status: 400 })
+    }
+    try {
+      const payload = (await nominatim(`/reverse?format=jsonv2&zoom=12&lat=${latitude}&lon=${longitude}`)) as NominatimPlace
+      const place = toGeocodedPlace(payload)
+      if (!place) return json({ error: 'place_not_found' }, { status: 404 })
+      return json({ place })
+    } catch (error) {
+      return json({ error: 'geocode_failed', detail: error instanceof Error ? error.message : 'unknown' }, { status: 502 })
+    }
+  }
+
+  const query = typeof body.query === 'string' ? body.query.trim().slice(0, 120) : ''
+  if (!query) return json({ error: 'query_required' }, { status: 400 })
+
+  try {
+    const payload = (await nominatim(`/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`)) as NominatimPlace[]
+    const places = (Array.isArray(payload) ? payload : []).map(toGeocodedPlace).filter((place): place is GeocodedPlace => place !== null)
+    if (!places.length) return json({ error: 'place_not_found', query }, { status: 404 })
+    return json({ query, places })
+  } catch (error) {
+    return json({ error: 'geocode_failed', detail: error instanceof Error ? error.message : 'unknown' }, { status: 502 })
+  }
+}
+
+export function GET(): Response {
+  return json({ error: 'method_not_allowed' }, { status: 405 })
+}

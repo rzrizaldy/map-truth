@@ -1,6 +1,7 @@
 import { verifyOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
 import { getMapRuntime } from '../map/runtime'
+import { geocodePlace } from '../map/geocode'
 import { geometryHashMatches } from '../lib/hash'
 import { exportArtwork } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
@@ -152,6 +153,56 @@ export const navigateMap = async (input: { center?: unknown; zoom?: unknown; lab
     source: 'webmcp', beforeHash: `${before.center.join(',')}/${before.zoom}`, afterHash: `${longitude},${latitude}/${zoom}`, reversible: true,
   })
   return { status: 'ok', center: [longitude, latitude], zoom, artworkGeometryChanged: false }
+}
+
+/**
+ * Move the map to a named place and lock it in one call.
+ *
+ * `navigate_map` takes raw coordinates, which is useless when the grounding a
+ * caller wants is "the place my prompt is about". This is the tool that makes
+ * the prompt able to steer the map.
+ */
+export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Promise<ToolResult> => {
+  const query = typeof input.place === 'string' ? cleanText(input.place, 120) : ''
+  if (!query) return { status: 'error', reason: 'invalid_place' }
+  const runtime = getMapRuntime()
+  if (!runtime) return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+
+  const outcome = await geocodePlace(query)
+  if (!outcome.ok) {
+    const reason = outcome.reason === 'not_found' ? 'place_not_found' : 'geocoder_unavailable'
+    addActivity('focus_place', 'needs_user_action', outcome.reason === 'not_found'
+      ? `No OpenStreetMap place matched "${query}"`
+      : 'The place lookup service is unreachable', { source: 'webmcp' })
+    return {
+      status: 'needs_user_action',
+      reason,
+      suggestedAction: outcome.reason === 'not_found' ? 'try_a_different_place_name' : 'move_the_map_manually',
+    }
+  }
+  const resolved = outcome.place
+
+  captureUndo(`focus on ${resolved.name}`)
+  await runtime.navigate(resolved.center, resolved.zoom)
+  appStore.setState((state) => ({
+    place: { name: resolved.name, label: resolved.label, source: 'geocoded', resolving: false },
+    ui: { ...state.ui, canUndo: true },
+  }))
+  addActivity('focus_place', 'ok', `Map moved to ${resolved.label}`, {
+    source: 'webmcp', afterHash: `${resolved.center.join(',')}/${resolved.zoom}`, reversible: true,
+  })
+
+  if (input.lock === false) {
+    return { status: 'ok', place: resolved.name, label: resolved.label, center: resolved.center, zoom: resolved.zoom, locked: false }
+  }
+  const lock = await runtime.lockLiveOsm('webmcp')
+  return {
+    ...lock,
+    place: resolved.name,
+    label: resolved.label,
+    center: resolved.center,
+    zoom: resolved.zoom,
+  } as ToolResult
 }
 
 export const generateComparison = (input: { routes?: unknown; prompt?: unknown }): ToolResult => stageComparisonForApproval(input)

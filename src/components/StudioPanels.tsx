@@ -7,25 +7,26 @@ export function StatusRail() {
   const webmcp = useAppStore((state) => state.ui)
   const place = useAppStore((state) => state.place)
   const label = !mapReady
-    ? 'LOADING SOURCES'
+    ? 'Loading the map…'
     : data.verificationStatus === 'verifying'
-      ? 'VERIFYING OSM'
+      ? 'Double-checking…'
       : data.lock?.kind === 'verified'
-        ? 'OSM VERIFIED'
+        ? 'Confirmed with OpenStreetMap'
         : data.lock
-          ? 'LIVE OSM LOCK'
+          ? 'Map locked in'
           : data.status === 'error'
-            ? 'LOCK ERROR'
-            : 'EXPLORE'
+            ? 'Something went wrong'
+            : 'Move the map'
   const tone = data.status === 'error' || data.verificationStatus === 'error' ? 'error' : data.lock?.kind === 'verified' ? 'verified' : data.lock ? 'locked' : 'idle'
 
   return (
     <div className={`status-rail status-rail--${tone}`} aria-label="Live geography context">
       <div><span className="status-dot" /> {label}</div>
-      <strong>{data.features.length ? `${data.features.length.toLocaleString()} paths` : mapReady ? 'vector sources ready' : 'connecting to tiles'}</strong>
-      <span>{data.lock ? `${place.name} · ${data.lock.geometryHash.slice(0, 13)}` : 'move the map, then lock the viewport'}</span>
-      <span className="cost-boundary">Cost gate on</span>
-      <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 8 tools' : 'Manual mode'}</span>
+      <strong>{data.lock ? place.name : mapReady ? 'Ready' : ''}</strong>
+      <span>{data.lock
+        ? `${data.features.length.toLocaleString()} real streets, parks and waterways`
+        : 'Drag to somewhere you know, then keep the view'}</span>
+      <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 9 tools' : 'Manual mode'}</span>
     </div>
   )
 }

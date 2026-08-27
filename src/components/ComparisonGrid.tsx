@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { approvePendingComparison, cancelGeneration, generateComparisonManually, runGenerationRoute } from '../ai/generation'
+import { approvePendingComparison, cancelGeneration, runGenerationRoute } from '../ai/generation'
 import { PosterSvg } from '../poster/PosterSvg'
 import { appStore, useAppStore } from '../state/store'
 import type { ComparisonRoute, GenerationRouteState } from '../types/maptruth'
 import { lockLiveOsm } from '../webmcp/commands'
 
 const routeCopy: Record<ComparisonRoute, { number: string; title: string; description: string; risk: string; riskClass: string }> = {
-  promptOnly: { number: 'LEVEL 1', title: 'Prompt only', description: 'No map evidence at all. The model invents the city.', risk: 'Unverified', riskClass: 'high' },
-  screenshotGrounded: { number: 'LEVEL 2', title: 'Screenshot', description: 'The live viewport is passed as an image. Topology can still drift.', risk: 'Visually guided', riskClass: 'medium' },
-  mapTruthGrounded: { number: 'LEVEL 3', title: 'WebMCP map truth', description: 'GPT supplies art only; exact OSM paths stay deterministic.', risk: 'Geometry-locked', riskClass: 'locked' },
+  promptOnly: { number: 'FIRST', title: 'Made up', description: 'The AI never saw a map. It invents the streets.', risk: 'Not a real place', riskClass: 'high' },
+  screenshotGrounded: { number: 'SECOND', title: 'From a picture', description: 'The AI saw a screenshot and copied it by eye. Streets shift.', risk: 'Roughly right', riskClass: 'medium' },
+  mapTruthGrounded: { number: 'THIRD', title: 'Grounded in the real map', description: 'The AI only made the artwork. The streets are the real ones.', risk: 'Real streets', riskClass: 'locked' },
 }
 
 function RouteProgress({ route, state }: { route: ComparisonRoute; state: GenerationRouteState }) {
@@ -19,13 +19,13 @@ function RouteProgress({ route, state }: { route: ComparisonRoute; state: Genera
     return () => window.clearInterval(timer)
   }, [state.status])
   const elapsed = state.startedAt ? Math.round((now - state.startedAt) / 1000) : 0
-  const label = state.status === 'queued' ? 'Queued' : state.status === 'awaiting_approval' ? 'Awaiting approval' : `Generating · ${elapsed}s`
+  const label = state.status === 'queued' ? 'Waiting' : state.status === 'awaiting_approval' ? 'Needs your OK' : `Drawing · ${elapsed}s`
   return (
     <div className="route-progress" role="status">
       <span className="route-progress-rule" />
       <strong>{label}</strong>
-      <small>{elapsed > 90 ? 'Complex GPT Image requests can take up to two minutes.' : 'A real gpt-image-2 request is running.'}</small>
-      {state.status === 'generating' ? <button type="button" onClick={() => cancelGeneration(route)}>Cancel locally</button> : null}
+      <small>{elapsed > 90 ? 'Detailed images can take up to two minutes.' : 'This is a real image being generated.'}</small>
+      {state.status === 'generating' ? <button type="button" onClick={() => cancelGeneration(route)}>Stop waiting</button> : null}
     </div>
   )
 }
@@ -40,106 +40,72 @@ function ResultVisual({ route, state, locked }: { route: ComparisonRoute; state:
   if (state.status === 'error' || state.status === 'cancelled') {
     return (
       <div className="route-error">
-        <strong>{state.status === 'cancelled' ? 'Cancelled in this browser' : 'This route failed'}</strong>
+        <strong>{state.status === 'cancelled' ? 'Stopped' : 'That one didn’t work'}</strong>
         <p>{state.error}</p>
-        <button type="button" onClick={() => void runGenerationRoute(route)}>Retry this route</button>
+        <button type="button" onClick={() => void runGenerationRoute(route)}>Try again</button>
       </div>
     )
   }
   if (route === 'mapTruthGrounded') {
     return locked ? <PosterSvg /> : (
       <div className="taste-empty">
-        <strong>Lock a view first</strong>
-        <span>Route 3 unlocks straight from the loaded vector tiles.</span>
-        <button type="button" onClick={() => void lockLiveOsm()}>Lock this view</button>
+        <strong>Pick a place first</strong>
+        <span>This one needs a real map to stand on.</span>
+        <button type="button" onClick={() => void lockLiveOsm()}>Use the current view</button>
       </div>
     )
   }
-  return <div className="taste-empty">{route === 'promptOnly' ? <>No map evidence<br />Maximum invention</> : <>Live viewport as pixels<br />Geometry may drift</>}</div>
+  return <div className="taste-empty">{route === 'promptOnly' ? <>Nothing to go on</> : <>Copied by eye</>}</div>
 }
 
 export function ComparisonGrid() {
   const ai = useAppStore((state) => state.ai)
   const locked = useAppStore((state) => Boolean(state.data.lock))
-  const mapReady = useAppStore((state) => state.ui.mapReady)
-  const anyRunning = Object.values(ai.routes).some((route) => route.status === 'generating' || route.status === 'queued')
+  const placeName = useAppStore((state) => state.place.name)
   const generated = Object.values(ai.routes).some((route) => route.status === 'ready')
 
   return (
-    <>
-      <section className={`step ${mapReady ? '' : 'step--waiting'}`} id="step-2">
-        <div className="step-head">
-          <span className="step-num">2</span>
-          <h2>Write one prompt</h2>
-          <p>The same art brief goes to all three routes. Nothing else differs.</p>
-        </div>
-        <div className="prompt-block">
-          <label htmlFor="ai-prompt">Art brief sent to GPT Image 2</label>
-          <textarea
-            id="ai-prompt"
-            value={ai.prompt}
-            maxLength={1200}
-            onChange={(event) => appStore.setState((current) => ({ ai: { ...current.ai, prompt: event.target.value } }))}
-          />
-          <div className="prompt-actions">
-            <button className="button button--primary" type="button" onClick={() => void generateComparisonManually()} disabled={!mapReady || anyRunning}>
-              {anyRunning ? 'Generating…' : locked ? 'Generate all 3' : 'Generate routes 1 + 2'}
-            </button>
-            <small>{locked ? 'Route 3 uses your live OSM lock.' : 'Lock a view in step 1 to unlock route 3.'}</small>
+    <section className={`step ${generated ? 'step--done' : 'step--waiting'}`} id="step-3">
+      <div className="step-head">
+        <span className="step-num">3</span>
+        <h2>Spot the difference</h2>
+        <p>Same prompt, three times. Only the third one knows what the streets really look like.</p>
+      </div>
+
+      {ai.pendingRoutes?.length ? (
+        <div className="generation-approval" role="alert">
+          <div>
+            <span>ONE LAST CHECK</span>
+            <strong>{ai.pendingRoutes.length} image{ai.pendingRoutes.length === 1 ? '' : 's'} ready to make</strong>
           </div>
+          <p>An assistant set this up. Nothing has been generated or charged yet.</p>
+          <button className="button button--primary" type="button" onClick={approvePendingComparison}>Make them</button>
+          <button className="button" type="button" onClick={() => appStore.setState((state) => ({ ai: { ...state.ai, pendingRoutes: undefined } }))}>Cancel</button>
         </div>
-      </section>
+      ) : null}
 
-      <section className={`step ${generated ? 'step--done' : 'step--waiting'}`} id="step-3">
-        <div className="step-head">
-          <span className="step-num">3</span>
-          <h2>Compare the evidence</h2>
-          <p>Same prompt, three levels of grounding. Watch invention collapse into geometry.</p>
-        </div>
-
-        {ai.pendingRoutes?.length ? (
-          <div className="generation-approval" role="alert">
-            <div>
-              <span>WEBMCP COST GATE</span>
-              <strong>{ai.pendingRoutes.length} real GPT Image request{ai.pendingRoutes.length === 1 ? '' : 's'} staged</strong>
-            </div>
-            <p>The agent prepared these routes. Nothing has been billed yet.</p>
-            <button className="button button--primary" type="button" onClick={approvePendingComparison}>Approve generation</button>
-            <button className="button" type="button" onClick={() => appStore.setState((state) => ({ ai: { ...state.ai, pendingRoutes: undefined } }))}>Dismiss</button>
-          </div>
-        ) : null}
-
-        <div className="taste-grid">
-          {(Object.keys(routeCopy) as ComparisonRoute[]).map((route) => {
-            const copy = routeCopy[route]
-            const state = ai.routes[route]
-            return (
-              <article className={`taste-card ${route === 'mapTruthGrounded' ? 'taste-card--truth' : ''}`} key={route}>
-                <div className="taste-number">{copy.number}</div>
-                <h3>{copy.title}</h3>
-                <p>{copy.description}</p>
-                <div className="taste-visual"><ResultVisual route={route} state={state} locked={locked} /></div>
-                {route === 'mapTruthGrounded' ? (
-                  <div className="preview-ladder" aria-label="MapTruth preview stages">
-                    <span className="done">Basemap</span>
-                    <span className={locked ? 'done' : ''}>OSM lock</span>
-                    <span className={state.status === 'ready' ? 'done' : ''}>Art layer</span>
-                    <span className={state.status === 'ready' ? 'done' : ''}>Truth seam</span>
-                  </div>
-                ) : null}
-                <div className="card-status-row">
-                  <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>
-                  {state.durationMs ? <span className="route-duration">{(state.durationMs / 1000).toFixed(1)}s</span> : null}
-                </div>
-                {route === 'mapTruthGrounded' && locked && state.status === 'idle' ? (
-                  <button className="route-action" type="button" onClick={() => void runGenerationRoute(route)}>Generate route 3</button>
-                ) : null}
-              </article>
-            )
-          })}
-        </div>
-        <p className="taste-footnote">Map data © OpenStreetMap contributors · Route 3 overlays source IDs and geometry hashes after generation.</p>
-      </section>
-    </>
+      <div className="taste-grid">
+        {(Object.keys(routeCopy) as ComparisonRoute[]).map((route) => {
+          const copy = routeCopy[route]
+          const state = ai.routes[route]
+          return (
+            <article className={`taste-card ${route === 'mapTruthGrounded' ? 'taste-card--truth' : ''}`} key={route}>
+              <div className="taste-number">{copy.number}</div>
+              <h3>{copy.title}</h3>
+              <p>{route === 'mapTruthGrounded' && locked ? `Real streets of ${placeName}, styled by AI.` : copy.description}</p>
+              <div className="taste-visual"><ResultVisual route={route} state={state} locked={locked} /></div>
+              <div className="card-status-row">
+                <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>
+                {state.durationMs ? <span className="route-duration">{(state.durationMs / 1000).toFixed(0)}s</span> : null}
+              </div>
+              {route === 'mapTruthGrounded' && locked && state.status === 'idle' ? (
+                <button className="route-action" type="button" onClick={() => void runGenerationRoute(route)}>Make this one</button>
+              ) : null}
+            </article>
+          )
+        })}
+      </div>
+      <p className="taste-footnote">Map data © OpenStreetMap contributors</p>
+    </section>
   )
 }

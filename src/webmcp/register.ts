@@ -1,6 +1,7 @@
 import { appStore } from '../state/store'
 import {
   exportGroundedArtwork,
+  focusPlace,
   generateComparison,
   getMapContext,
   inspectComparison,
@@ -11,6 +12,7 @@ import {
 } from './commands'
 import {
   EXPORT_ARTWORK_SCHEMA,
+  FOCUS_PLACE_SCHEMA,
   GENERATE_COMPARISON_SCHEMA,
   INSPECT_COMPARISON_SCHEMA,
   INSPECT_MAP_CONTEXT_SCHEMA,
@@ -49,6 +51,13 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         inputSchema: NAVIGATE_MAP_SCHEMA,
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         execute: (input) => navigateMap(input as { center?: unknown; zoom?: unknown; label?: unknown }),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'focus_place', title: 'Focus the map on a named place',
+        description: 'Move the map to a place named in plain language (for example "Jakarta") and lock its live OSM geometry. Use this to ground generation in the place a prompt is actually about.',
+        inputSchema: FOCUS_PLACE_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        execute: (input) => focusPlace(input as { place?: unknown; lock?: unknown }),
       }, { signal: controller.signal }),
       document.modelContext.registerTool({
         name: 'lock_live_osm', title: 'Lock live OSM viewport',
@@ -94,7 +103,7 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
       }, { signal: controller.signal }),
     ])
     appStore.setState((state) => ({
-      ui: { ...state.ui, webmcpAvailable: true, webmcpStatus: 'available', webmcpMessage: 'Agent mode active · 8 visible MapTruth tools registered.' },
+      ui: { ...state.ui, webmcpAvailable: true, webmcpStatus: 'available', webmcpMessage: 'Agent mode active · 9 visible MapTruth tools registered.' },
     }))
   } catch (error) {
     controller.abort()

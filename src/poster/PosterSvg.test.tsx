@@ -16,7 +16,16 @@ beforeEach(() => {
     data: { status: 'ready', features: [source], verificationStatus: 'verified' },
     map: { center: [106.81, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: undefined,
-    poster: { spec: { ...DEFAULT_POSTER_SPEC, title: '<img src=x onerror=alert(1)>', emphasizedFeatureIds: [] }, status: 'ready', renderedFeatureIds: ['osm:a99'], warnings: [] },
+    poster: { spec: { ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: [] }, status: 'ready', renderedFeatureIds: ['osm:a99'], warnings: [] },
+    ai: {
+      // The poster heading is prompt-derived, so untrusted prompt text reaches the SVG.
+      prompt: '<img src=x onerror=alert(1)> poster',
+      routes: {
+        promptOnly: { status: 'idle' },
+        screenshotGrounded: { status: 'idle' },
+        mapTruthGrounded: { status: 'idle' },
+      },
+    },
   })
 })
 
@@ -28,7 +37,10 @@ describe('poster SVG provenance', () => {
     expect(container.textContent).toContain('MAP DATA © OPENSTREETMAP CONTRIBUTORS')
     expect(container.querySelector('script')).toBeNull()
     expect(container.querySelector('img')).toBeNull()
-    expect(container.innerHTML).toContain('&lt;IMG SRC=X ONERROR=ALERT(1)&gt;')
+    // Prompt text reaches the SVG heading, so it must lose every character
+    // that could close a tag or open an attribute.
+    expect(container.innerHTML).not.toContain('onerror=')
+    expect(container.textContent).toContain('IMG SRC X ONERROR ALERT 1')
   })
 
   it('renders an OSM-backed legend only when showLegend is true', () => {

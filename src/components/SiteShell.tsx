@@ -11,8 +11,8 @@ export function SiteShell({ children, headerCode = 'WEBMCP' }: SiteShellProps) {
       <header className="site-header">
         <a className="wordmark" href="#top" aria-label="MapTruth home"><span>Map</span>Truth</a>
         <nav>
-          <a href="#step-1">1 · Lock</a>
-          <a href="#step-2">2 · Prompt</a>
+          <a href="#step-1">1 · Ask</a>
+          <a href="#step-2">2 · Place</a>
           <a href="#step-3">3 · Compare</a>
         </nav>
         <span className="header-code">{headerCode}</span>

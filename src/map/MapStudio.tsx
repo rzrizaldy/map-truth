@@ -7,6 +7,7 @@ import { OPENFREEMAP_STYLE } from './constants'
 import { createLiveLock, liveLockCacheKey, normalizeViewportFeatures, type ViewportCandidate } from './liveOsm'
 import { readCachedLock, writeCachedLock } from './lockCache'
 import { registerMapRuntime } from './runtime'
+import { describeViewport } from './geocode'
 import { hashGeometrySync } from '../lib/hash'
 import { addActivity, appStore, useAppStore } from '../state/store'
 import { captureUndo } from '../state/history'
@@ -170,6 +171,11 @@ export function MapStudio() {
         return { status: 'error', reason: 'no_supported_features' }
       }
       const lock = cached?.lock ?? createLiveLock(normalized, bbox, zoom)
+      // A caller that just focused a named place already knows where this is;
+      // relabelling it with coordinates would throw that grounding away.
+      const previousPlace = appStore.getState().place
+      const keepNamedPlace = previousPlace.source === 'geocoded'
+        && previousPlace.name.length > 0
       captureUndo('live OSM lock')
       const polygon = bboxToPolygon(bbox)
       const selection = { kind: 'area' as const, id: 'human:viewport', geometry: polygon, geometryHash: hashGeometrySync(polygon) }
@@ -177,12 +183,26 @@ export function MapStudio() {
       const renderedFeatureIds = featuresInContext(seeded).map((feature) => feature.properties.id)
       appStore.setState((state) => ({
         data: { status: 'ready', features: normalized, lock, verificationStatus: 'idle' },
-        place: { name: formatPlaceLabel(bbox), source: 'live' },
+        place: keepNamedPlace
+          ? previousPlace
+          : { name: formatPlaceLabel(bbox), source: 'live', resolving: true },
         selection,
         poster: { ...state.poster, status: 'ready', renderedFeatureIds, warnings: ['Viewport-tile geometry; use Verify with Overpass for canonical OSM IDs.'] },
         ui: { ...state.ui, canUndo: true },
       }))
       void writeCachedLock(cacheKey, { lock, features: normalized })
+      // Coordinates mean nothing to a newcomer, and a mismatch with the prompt
+      // is invisible without a real name. Resolve it in the background so the
+      // lock itself is never delayed.
+      if (!keepNamedPlace) void describeViewport([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]).then((place) => {
+        if (!place) {
+          appStore.setState((state) => ({ place: { ...state.place, resolving: false } }))
+          return
+        }
+        appStore.setState((state) => (state.data.lock?.id === lock.id
+          ? { place: { name: place.name, label: place.label, source: 'live', resolving: false } }
+          : { place: { ...state.place, resolving: false } }))
+      })
       const durationMs = Math.round(performance.now() - startedAt)
       addActivity('lock_live_osm', 'ok', `${normalized.length.toLocaleString()} live OSM features locked${cached ? ' from viewport cache' : ''}`, {
         source, durationMs, afterHash: lock.geometryHash, affectedFeatureIds: renderedFeatureIds.slice(0, 80), reversible: true,
@@ -282,14 +302,14 @@ export function MapStudio() {
   }, [selectedReceipt])
 
   const data = useAppStore((state) => state.data)
-  const metaLabel = data.lock?.kind === 'verified' ? 'OSM verified' : data.lock ? 'OSM locked' : 'Live vector map'
+  const metaLabel = data.lock?.kind === 'verified' ? 'Confirmed with OpenStreetMap' : data.lock ? 'Using this view' : 'Live OpenStreetMap'
 
   return (
     <div className="map-shell map-shell--demo">
       <div className="map-meta">
         <span>{metaLabel}</span>
-        <strong>{data.features.length ? `${data.features.length.toLocaleString()} features` : 'Pan · zoom · lock'}</strong>
-        <span>{data.lock ? data.lock.geometryHash.slice(0, 15) : 'no lock yet'}</span>
+        <strong>{data.features.length ? `${data.features.length.toLocaleString()} real shapes` : 'Drag to explore'}</strong>
+        <span>{data.lock ? '' : 'nothing picked yet'}</span>
       </div>
       <div ref={containerRef} className="map-canvas" aria-label="Interactive worldwide OpenStreetMap vector map" />
       <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">

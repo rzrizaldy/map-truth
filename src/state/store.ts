@@ -4,8 +4,6 @@ import type { ActivityEntry, MapTruthState } from '../types/maptruth'
 import { NYC_CENTER, NYC_ZOOM } from '../map/constants'
 
 export const DEFAULT_POSTER_SPEC = {
-  title: 'Map without invention',
-  subtitle: 'A source-backed public-information map',
   preset: 'editorial' as const,
   palette: 'red-cream-black' as const,
   emphasizedFeatureIds: [] as string[],
@@ -43,7 +41,7 @@ const baseState = (): MapTruthState => ({
   },
   ai: {
     prompt:
-      'Jakarta map overlay with a hypothetical NYC + NJ region based on vibes.',
+      'A vintage travel poster of Jakarta at sunset.',
     routes: emptyRoutes(),
   },
   activity: [],

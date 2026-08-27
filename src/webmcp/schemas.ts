@@ -61,6 +61,16 @@ export const GENERATE_COMPARISON_SCHEMA = {
   additionalProperties: false,
 } as const
 
+export const FOCUS_PLACE_SCHEMA = {
+  type: 'object',
+  properties: {
+    place: { type: 'string', minLength: 1, maxLength: 120 },
+    lock: { type: 'boolean' },
+  },
+  required: ['place'],
+  additionalProperties: false,
+} as const
+
 export const EXPORT_ARTWORK_SCHEMA = {
   type: 'object',
   properties: {

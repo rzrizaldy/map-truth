@@ -28,8 +28,6 @@ export type SourceFeatureCollection = FeatureCollection<Geometry, SourceFeatureP
 export type FeatureRef = Pick<SourceFeatureProperties, 'id' | 'name' | 'type'>
 
 export type PosterSpec = {
-  title: string
-  subtitle?: string
   preset: PosterPreset
   palette: PosterPalette
   emphasizedFeatureIds: string[]
@@ -78,7 +76,7 @@ export type GeographyLock = {
 
 export type ComparisonMode = 'poster' | 'source' | 'split' | 'overlay'
 
-export type PlaceSource = 'none' | 'live' | 'overpass'
+export type PlaceSource = 'none' | 'live' | 'overpass' | 'geocoded'
 
 export type MapTruthState = {
   data: {
@@ -92,6 +90,9 @@ export type MapTruthState = {
   place: {
     name: string
     source: PlaceSource
+    /** Full geocoder label for the locked viewport, when one resolved. */
+    label?: string
+    resolving?: boolean
   }
   map: {
     center: [number, number]

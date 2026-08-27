@@ -2,6 +2,7 @@ import type { SourceFeature } from '../types/maptruth'
 import { contextBounds, featuresInContext } from '../map/context'
 import { geometryAnchor, geometryToPath, type PosterFrame } from './projection'
 import { useAppStore } from '../state/store'
+import { posterTitleFromPrompt } from './title'
 import barlowData from '@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2?inline'
 import sourceSansData from '@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?inline'
 import plexData from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2?inline'
@@ -75,7 +76,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   )
   const emphasized = new Set(spec.emphasizedFeatureIds)
   const mapTransform = 'translate(0 300)'
-  const frameCode = `${bounds[0].toFixed(3)} / ${bounds[1].toFixed(3)} — ${bounds[2].toFixed(3)} / ${bounds[3].toFixed(3)}`
+  const posterTitle = posterTitleFromPrompt(state.ai.prompt, state.place.name)
 
   return (
     <svg
@@ -83,7 +84,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
       className={className}
       viewBox="0 0 1200 1500"
       role="img"
-      aria-label={sourceMode ? 'Neutral source map' : `${spec.title} grounded poster`}
+      aria-label={sourceMode ? 'Neutral source map' : `${posterTitle} grounded poster`}
       xmlns="http://www.w3.org/2000/svg"
     >
       <style>{`
@@ -160,15 +161,15 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
 
       <path d="M60 70H1140" stroke={sourceMode ? '#202124' : palette.accent} strokeWidth="12" />
       <text x="64" y="157" className="poster-title" fontSize="88" letterSpacing="-0.025em" fill={sourceMode ? '#202124' : palette.ink}>
-        {sourceMode ? 'SOURCE GEOMETRY' : spec.title.toUpperCase()}
+        {sourceMode ? 'SOURCE GEOMETRY' : posterTitle.toUpperCase()}
       </text>
       <text x="67" y="213" className="poster-copy" fontSize="27" fill={sourceMode ? '#5f6368' : palette.ink}>
         {sourceMode
           ? 'Neutral rendering — same IDs, bounds, projection, and hashes'
-          : `${features.length.toLocaleString()} source-backed paths · ${state.data.lock?.kind === 'verified' ? 'canonical OpenStreetMap' : 'live OpenStreetMap tiles'}`}
+          : `${state.place.name} · every line from OpenStreetMap`}
       </text>
       <text x="67" y="260" className="poster-mono" fontSize="15" letterSpacing="0.12em" fill={sourceMode ? '#5f6368' : palette.accent}>
-        {sourceMode ? 'NEUTRAL SOURCE VIEW' : state.place.name.toUpperCase()}  /  {frameCode}
+        {sourceMode ? 'NEUTRAL SOURCE VIEW' : state.place.name.toUpperCase()}
       </text>
 
       <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#dadce0' : palette.ink} />
