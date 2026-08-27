@@ -175,16 +175,11 @@ export function MapStudio() {
       const startedAt = performance.now()
       const bbox = boundsTuple(map)
       const zoom = map.getZoom()
-      // `map.loaded()` is false whenever any tile is in flight, which is most of
-      // the time right after a camera move — an agent locking twice in a row
-      // would be told the map was not ready while thousands of features sat
-      // queryable. Only a missing style is genuinely blocking; for tiles still
-      // arriving, wait rather than refuse.
-      if (!map.isStyleLoaded()) await settleTiles(6_000)
-      if (!map.isStyleLoaded()) {
-        addActivity('lock_live_osm', 'needs_user_action', 'The vector map is still loading', { source })
-        return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
-      }
+      // Both `map.loaded()` and `isStyleLoaded()` report false while any tile is
+      // in flight, which is most of the time just after a camera move. Refusing
+      // on that told agents the map was not ready while thousands of features
+      // sat queryable. Wait once, then judge by what can actually be read.
+      if (!map.isStyleLoaded()) await settleTiles()
       if (!liveBboxSpanOk(bbox)) {
         addActivity('lock_live_osm', 'needs_user_action', 'Zoom closer before creating a live OSM lock', { source })
         return { status: 'needs_user_action', reason: 'bbox_too_large', suggestedAction: 'zoom_in' }
@@ -201,6 +196,13 @@ export function MapStudio() {
         normalized = normalizeViewportFeatures(candidatesFromMap(map), undefined, undefined, bbox)
       }
       if (!normalized.length) {
+        // Nothing readable. Distinguish "still loading" from "genuinely empty
+        // here", because only one of them is worth retrying.
+        if (!map.isStyleLoaded()) {
+          appStore.setState((state) => ({ data: { ...state.data, status: 'idle' } }))
+          addActivity('lock_live_osm', 'needs_user_action', 'The vector map is still loading', { source })
+          return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+        }
         appStore.setState((state) => ({ data: { ...state.data, status: 'error', error: 'No supported OSM features are loaded. Zoom closer or move the map.' } }))
         addActivity('lock_live_osm', 'error', 'No supported OSM features were available in the loaded tiles', { source, durationMs: Math.round(performance.now() - startedAt) })
         return { status: 'error', reason: 'no_supported_features' }
@@ -280,28 +282,34 @@ export function MapStudio() {
     const resize = () => map.resize()
     window.addEventListener('resize', resize)
 
+    // Readiness is armed from construction, not from `load`: on a slow style
+    // fetch the fallback timer used to start several seconds late and the
+    // studio could sit disabled well past the point it was usable.
+    let announcedReady = false
+    const announceReady = (viaTimeout: boolean) => {
+      if (announcedReady) return
+      announcedReady = true
+      window.clearTimeout(readyTimer)
+      window.clearTimeout(styleWatchdog)
+      map.off('idle', onIdle)
+      mapElement.dataset.mapLoaded = 'true'
+      appStore.setState((state) => ({ ui: { ...state.ui, mapReady: true } }))
+      addActivity('map_ready', 'ok', viaTimeout
+        ? 'Map is interactive; some OSM tiles are still arriving'
+        : 'Live OpenStreetMap vector sources are ready', { source: 'system' })
+    }
+    const onIdle = () => announceReady(false)
+    let readyTimer = 0
+
     map.on('load', () => {
       window.clearTimeout(styleWatchdog)
       addLockOverlay(map)
       addPinLayer(map)
       resize()
-      // A stalled tile request must not leave the studio permanently disabled:
-      // fall back to ready once the style itself has rendered.
-      let announcedReady = false
-      const announceReady = (viaTimeout: boolean) => {
-        if (announcedReady) return
-        announcedReady = true
-        window.clearTimeout(readyTimer)
-        map.off('idle', onIdle)
-        mapElement.dataset.mapLoaded = 'true'
-        appStore.setState((state) => ({ ui: { ...state.ui, mapReady: true } }))
-        addActivity('map_ready', 'ok', viaTimeout
-          ? 'Map is interactive; some OSM tiles are still arriving'
-          : 'Live OpenStreetMap vector sources are ready', { source: 'system' })
-      }
-      const onIdle = () => announceReady(false)
-      const readyTimer = window.setTimeout(() => announceReady(true), 10_000)
       map.on('idle', onIdle)
+      // The style is up, so the map is usable. `idle` waits for every tile and
+      // on a busy network may never arrive; don't hold the studio hostage to it.
+      readyTimer = window.setTimeout(() => announceReady(true), 8_000)
     })
 
     map.on('movestart', (event) => {
@@ -329,6 +337,7 @@ export function MapStudio() {
 
     return () => {
       window.clearTimeout(styleWatchdog)
+      window.clearTimeout(readyTimer)
       window.removeEventListener('resize', resize)
       unregisterRuntime()
       map.remove()

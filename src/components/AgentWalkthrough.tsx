@@ -12,7 +12,11 @@ const summarise = (tool: string, result?: ToolResult): string => {
   if (tool === 'focus_place') return `${result.status} · ${String(value.place ?? '')}`
   if (tool === 'inspect_map_context') return `${Number(value.featureCount ?? 0)} features in context`
   if (tool === 'lock_live_osm') return `${Number(value.featureCount ?? 0)} shapes · ${String(value.geometryHash ?? '').slice(0, 14)}`
-  if (tool === 'verify_geography') return result.status === 'verified' ? 'every shape matches its source' : String(result.status)
+  if (tool === 'verify_geography') {
+    return result.status === 'verified'
+      ? `${Number(value.checkedFeatureCount ?? 0).toLocaleString()} shapes match their source`
+      : `${result.status}${value.reason ? ` · ${String(value.reason)}` : ''}`
+  }
   if (tool === 'generate_comparison') return 'stopped for your approval'
   return String(result.status)
 }
@@ -34,8 +38,16 @@ export function AgentWalkthrough() {
 
     for (let index = 0; index < plan.length; index += 1) {
       setSteps((current) => current.map((entry, i) => (i === index ? { ...entry, status: 'running' } : entry)))
-      const result = await plan[index].run()
-      const blocked = result.status === 'needs_user_action' && plan[index].tool !== 'generate_comparison'
+      let result: ToolResult
+      try {
+        result = await plan[index].run()
+      } catch (error) {
+        // A throwing tool used to leave the walkthrough spinning forever with
+        // nothing on screen to say why.
+        result = { status: 'error', reason: 'tool_threw', details: String(error) }
+      }
+      const blocked = result.status !== 'ok' && result.status !== 'verified' && result.status !== 'ready'
+        && plan[index].tool !== 'generate_comparison'
       setSteps((current) => current.map((entry, i) => (
         i === index ? { ...entry, status: blocked ? 'blocked' : 'done', result } : entry)))
       if (blocked) break

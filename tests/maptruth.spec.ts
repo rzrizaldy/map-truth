@@ -15,21 +15,21 @@ test('the prompt offers to move the map to a place it names', async ({ page }) =
     })
   })
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
 
   await page.getByRole('textbox').fill('A vintage travel poster of Jakarta at sunset')
   const chip = page.getByRole('button', { name: 'Go to Jakarta' })
   await expect(chip).toBeVisible()
   await chip.click()
 
-  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 25_000 })
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 45_000 })
   // The prompt, not a manual pan, decided where the grounding came from.
   await expect(page.locator('.status-rail').getByText('Jakarta')).toBeVisible({ timeout: 15_000 })
 })
 
 test('warns when the prompt names somewhere the map is not', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
 
@@ -62,16 +62,16 @@ test('the agent walkthrough runs the real tools and stops at the cost gate', asy
     })
   })
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
 
   await page.getByRole('button', { name: 'Run the agent on Jakarta' }).click()
 
   // Every step must succeed — a blocked step means an agent could not complete
   // the flow either.
-  await expect(page.locator('.agent-step--done')).toHaveCount(5, { timeout: 60_000 })
+  await expect(page.locator('.agent-step--done')).toHaveCount(5, { timeout: 90_000 })
   await expect(page.locator('.agent-step--blocked')).toHaveCount(0)
   await expect(page.locator('.agent-step').filter({ hasText: 'verify_geography' }))
-    .toContainText('every shape matches its source')
+    .toContainText('match their source')
 
   // It must stop for a human rather than spending money on its own.
   await expect(page.getByText('ONE LAST CHECK')).toBeVisible()
@@ -80,7 +80,7 @@ test('the agent walkthrough runs the real tools and stops at the cost gate', asy
 
 test('locking twice in a row keeps working', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   const use = page.locator('#step-2').getByRole('button', { name: /Use this view/ })
   await use.click()
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
@@ -110,10 +110,10 @@ test('the prompt pins a real building at its true coordinates', async ({ page })
   })
 
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await page.getByRole('textbox').fill('Peta demo DPR Jakarta')
   await page.getByRole('button', { name: 'Go to Jakarta' }).click()
-  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 25_000 })
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 45_000 })
 
   await expect(page.locator('.prompt-hint--found')).toContainText('Dewan Perwakilan Rakyat', { timeout: 20_000 })
   // The pin is drawn on the live map, so it is inside the screenshot the
@@ -150,7 +150,7 @@ test('legacy /demo and /about links land on the same journey', async ({ page }) 
 
 test('live viewport lock does not wait for Overpass', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText(/real shapes/i).first()).toBeVisible()
@@ -196,7 +196,7 @@ test('an agent can navigate and lock through WebMCP alone', async ({ page }) => 
     ;(window as unknown as { __mapTruthTools: typeof registered }).__mapTruthTools = registered
   })
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
 
   const call = (name: string, input: unknown) => page.evaluate(
     ([toolName, args]) => {

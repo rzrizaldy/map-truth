@@ -2,7 +2,7 @@ import { verifyOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
 import { getMapRuntime } from '../map/runtime'
 import { geocodePlace } from '../map/geocode'
-import { geometryHashMatches } from '../lib/hash'
+import { geometryHashMatches, geometryHashMatchesSync } from '../lib/hash'
 import { exportRouteImage } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
 import { captureUndo } from '../state/history'
@@ -63,14 +63,23 @@ export const verifyGeography = async (): Promise<ToolResult> => {
   }
 
   // The screenshot handed to the model is only as trustworthy as the geometry
-  // that produced it, so re-hash every locked shape against its source.
-  const recomputed = await Promise.all(
-    state.data.features.map(async (feature) => ({
-      id: feature.properties.id,
-      matches: await geometryHashMatches(feature.geometry, feature.properties.geometryHash),
-    })),
-  )
-  const geometryHashMismatches = recomputed.filter((result) => !result.matches).map((result) => result.id)
+  // that produced it, so re-hash every locked shape against its source. Tile
+  // hashes verify synchronously; allocating a promise per feature made this
+  // needlessly slow across thousands of shapes.
+  const geometryHashMismatches: string[] = []
+  const deferred: Array<Promise<void>> = []
+  for (const feature of state.data.features) {
+    const { id, geometryHash } = feature.properties
+    const immediate = geometryHashMatchesSync(feature.geometry, geometryHash)
+    if (immediate === null) {
+      deferred.push(geometryHashMatches(feature.geometry, geometryHash).then((matches) => {
+        if (!matches) geometryHashMismatches.push(id)
+      }))
+    } else if (!immediate) {
+      geometryHashMismatches.push(id)
+    }
+  }
+  await Promise.all(deferred)
 
   addActivity('verify_geography', geometryHashMismatches.length ? 'error' : 'ok',
     geometryHashMismatches.length

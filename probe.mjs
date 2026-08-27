@@ -1,20 +1,16 @@
 import { chromium } from '@playwright/test'
-const ctx = await chromium.launchPersistentContext('', {
-  channel: 'chrome', headless: true,
-  args: ['--enable-features=WebMCP'],
-  viewport: { width: 1440, height: 1100 },
-})
-const page = await ctx.newPage()
-await page.goto('https://map-truth.vercel.app/')
-await page.waitForSelector('[data-map-loaded="true"]', { timeout: 45000 })
-
-console.log('agent badge :', await page.locator('.agent-mode').textContent())
-console.log('mode message:', (await page.locator('.agent-demo-note').textContent()).slice(0, 80))
-
-const tools = await page.evaluate(async () => {
-  const list = await document.modelContext.getTools()
-  return list.map((t) => ({ name: t.name, hasSchema: !!t.inputSchema, ro: t.annotations?.readOnlyHint }))
-})
-console.log('registered  :', tools.length)
-console.log(tools.map((t) => `  ${t.name.padEnd(22)} schema=${t.hasSchema} readOnly=${t.ro}`).join('\n'))
-await ctx.close()
+const b = await chromium.launch(); const p = await b.newPage({ viewport:{width:1440,height:1000} })
+await p.goto('http://127.0.0.1:4174/'); await p.waitForSelector('[data-map-loaded="true"]',{timeout:45000})
+await p.locator('#step-2').getByRole('button',{name:'Use this view'}).click()
+await p.waitForTimeout(3000)
+console.log(JSON.stringify(await p.evaluate(async () => {
+  const t0 = performance.now()
+  const btn = [...document.querySelectorAll('.agent-demo button')]
+  return { features: document.querySelector('.map-meta strong')?.textContent, setup: Math.round(performance.now()-t0), btn: btn.length }
+})))
+// time verify_geography specifically
+const t = Date.now()
+await p.getByRole('button', { name: /Run the agent on/ }).click()
+await p.waitForFunction(() => document.querySelectorAll('.agent-step--done').length >= 4, null, { timeout: 120000 })
+console.log('through verify_geography in', Date.now()-t, 'ms')
+await b.close()

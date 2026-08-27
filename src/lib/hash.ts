@@ -22,3 +22,13 @@ export const geometryHashMatches = async (geometry: unknown, storedHash: string)
   storedHash.startsWith('fnv1a:')
     ? hashGeometrySync(geometry) === storedHash
     : (await hashGeometry(geometry)) === storedHash
+
+/**
+ * Synchronous match for tile-derived hashes.
+ *
+ * Returns null when the stored hash needs the async SHA-256 path, so callers
+ * verifying thousands of features can stay on a plain loop instead of
+ * allocating a promise per feature.
+ */
+export const geometryHashMatchesSync = (geometry: unknown, storedHash: string): boolean | null =>
+  storedHash.startsWith('fnv1a:') ? hashGeometrySync(geometry) === storedHash : null
