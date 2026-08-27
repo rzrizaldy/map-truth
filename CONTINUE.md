@@ -4,9 +4,10 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
 ## Shape now
 
-- **One page, three steps.** `StudioPage` renders hero → step 1 lock → step 2 prompt → step 3 compare → proof seam → receipts. `/demo` and `/about` redirect to `/`.
+- **One page, three steps.** `StudioPage` renders hero → step 1 prompt → step 2 place → step 3 compare → proof seam. Technical detail sits in an "Under the hood" `<details>`. `/demo` and `/about` redirect to `/`.
+- **The prompt drives the map.** `extractPlaceMentions` turns prompt text into chips; `focusPlace` geocodes, flies, and locks. Without this the demo generated New York for a Jakarta prompt and said nothing.
 - **Google Maps palette.** Light surfaces, grey type, one blue accent (`--blue: #1a73e8`). Tokens live in `src/index.css`; the map overlay and `PosterSvg` follow the same colours.
-- Two Vercel Functions only: `api/generate-route.ts` and `api/osm-extract.ts`. Shared code lives in `api/_lib/`, tests are excluded by `.vercelignore`.
+- Three Vercel Functions: `api/generate-route.ts`, `api/osm-extract.ts`, `api/geocode.ts`. Shared code lives in `api/_lib/`, tests are excluded by `.vercelignore`.
 
 ## Hard-won invariants
 
@@ -27,6 +28,8 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 - `src/webmcp/register.ts` + `commands.ts` — eight tool contracts and manual parity
 - `src/ai/generation.ts` — per-route client state and approval staging
 - `api/generate-route.ts`, `api/osm-extract.ts` — validated Web handlers
+- `src/map/places.ts`, `src/components/PromptStep.tsx` — prompt → place chips → focus
+- `api/geocode.ts` — Nominatim forward/reverse with a lockable zoom floor
 - `src/pages/Studio.tsx`, `src/components/ComparisonGrid.tsx` — the three-step journey
 
 ## Open item
