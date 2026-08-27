@@ -32,6 +32,15 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 - `api/geocode.ts` — Nominatim forward/reverse with a lockable zoom floor
 - `src/pages/Studio.tsx`, `src/components/ComparisonGrid.tsx` — the three-step journey
 
-## Open item
+## WebMCP status
 
-`WEBMCP_ORIGIN_TRIAL_TOKEN` is not configured, so production Chrome reports Manual mode unless the tester enables `chrome://flags/#enable-webmcp-testing`. Register the origin trial and set it as a Vercel **build** env var to make agent mode discoverable for ordinary visitors. Do not claim WebMCP acceptance until a connected Chrome discovers and executes all eight tools against the deployed origin.
+Real agent mode is **verified against production**: Chrome 151 launched with
+`--enable-features=WebMCP` exposes `document.modelContext`, and
+`getTools()` returns all nine tools with schemas and annotations. Reproduce with
+`npm run verify:webmcp` — it drives the installed Chrome, not a stub.
+
+Still open: `WEBMCP_ORIGIN_TRIAL_TOKEN` is not configured, so a visitor using
+stock Chrome without the flag sees Manual mode. Register the origin trial and
+set it as a Vercel **build** env var to make agent mode discoverable without any
+flag. `tests/config/vercel-config.test.ts` already asserts the header appears
+exactly when that variable is set.

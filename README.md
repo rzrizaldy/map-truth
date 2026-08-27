@@ -28,7 +28,24 @@ Type a prompt that names a place. MapTruth takes the map there, locks the OpenSt
 
 WebMCP lets a page hand an agent real, typed tools instead of hoping it clicks the right pixels. MapTruth exposes nine, and the interesting one is `focus_place` — an assistant grounds an image in "Jakarta" by *naming* it, and the page answers with hashed geometry it can verify afterwards.
 
-Production Chrome only exposes `document.modelContext` behind a flag or an origin trial, so **Watch an assistant do it** runs the very same functions in the open. Not a mock of the tools — the tools, with their real receipts and the same cost gate.
+### Verify the WebMCP integration yourself
+
+```bash
+npm run verify:webmcp
+```
+
+That launches your installed Chrome with the WebMCP feature on (the command-line equivalent of `chrome://flags/#enable-webmcp-testing`), loads the **live production site**, and asks the browser's own `document.modelContext.getTools()` what the page registered. Nothing is mocked. Verified on Chrome 151:
+
+```
+ok    document.modelContext is exposed by the browser
+ok    all 9 tools registered and discoverable
+ok    every tool publishes an input schema
+ok    every tool describes itself
+ok    only the two inspect tools claim readOnlyHint
+ok    the page reports "Agent mode · 9 tools"
+```
+
+In a browser without WebMCP the page says **Manual mode** and stays fully usable, and **Watch an assistant do it** runs the very same functions in the open — not a mock of the tools, the tools, with their real receipts and the same cost gate.
 
 ## The journey
 
