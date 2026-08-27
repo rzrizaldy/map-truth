@@ -2,17 +2,33 @@
 
 [![CI](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml)
 
-**One prompt, three images. The only thing that changes is how much real map the AI was given.**
+**Ask an AI for a map of somewhere real, and it invents the streets. MapTruth makes it stop.**
 
-Live: [map-truth.vercel.app](https://map-truth.vercel.app)
+### → [map-truth.vercel.app](https://map-truth.vercel.app)
 
-MapTruth is a WebMCP demo. An agent (or you) locks a real OpenStreetMap viewport, writes one art brief, and compares three levels of grounding side by side.
+Type a prompt that names a place. MapTruth takes the map there, locks the OpenStreetMap geometry actually on screen, and renders your prompt three ways — so you can see exactly what grounding buys you.
 
-| Level | Evidence given to GPT Image 2 | Geographic claim |
+| | What the AI was given | Result |
 |---|---|---|
-| 1 · Prompt only | The brief alone | Unverified — the model invents the city |
-| 2 · Screenshot | The brief plus the captured MapLibre viewport | Visually guided — topology can still drift |
-| 3 · WebMCP map truth | The brief plus a compact lock summary, with geography **forbidden** in the output | Geometry-locked — MapTruth composites exact OSM vectors over the art layer |
+| **1 · Made up** | The prompt alone | A convincing city that does not exist |
+| **2 · From a picture** | Prompt + a screenshot of the real map | Right shape, wrong streets |
+| **3 · Grounded** | Prompt + a hashed OSM lock, and a ban on drawing geography | AI supplies the art; every line is real |
+
+![The three levels, generated from "A 1970s Swiss travel poster of Kyoto in autumn"](public/example/level-3.jpg)
+
+### Try it in 60 seconds
+
+1. Open the site. The three cards already show a finished run — no waiting.
+2. Edit the prompt to name any city. A **Go to _that place_** button appears; click it. The map flies there and locks.
+3. Hit **Run the agent on _that place_** to watch the WebMCP tool calls execute live, ending at a human approval gate.
+4. Hit **Make 3 images** for your own run (~50s per image, real `gpt-image-2` calls).
+5. Drag the truth seam at the bottom: the streets line up exactly across the boundary, because they are the same geometry.
+
+### Why this is a WebMCP project
+
+WebMCP lets a page hand an agent real, typed tools instead of hoping it clicks the right pixels. MapTruth exposes nine, and the interesting one is `focus_place` — an assistant grounds an image in "Jakarta" by *naming* it, and the page answers with hashed geometry it can verify afterwards.
+
+Production Chrome only exposes `document.modelContext` behind a flag or an origin trial, so **Watch an assistant do it** runs the very same functions in the open. Not a mock of the tools — the tools, with their real receipts and the same cost gate.
 
 ## The journey
 
