@@ -292,6 +292,7 @@ export function MapStudio() {
         ...(movedAway ? {
           data: { status: 'idle' as const, features: [], verificationStatus: 'idle' as const },
           selection: undefined,
+          truthPins: [],
           poster: { ...state.poster, status: 'empty' as const, renderedFeatureIds: [], warnings: [] },
           ai: { ...state.ai, routes: { ...state.ai.routes, mapTruthGrounded: { status: 'idle' as const } } },
         } : {}),

@@ -14,17 +14,30 @@ const mercator = ([longitude, latitude]: Position): [number, number] => {
   return [x, y]
 }
 
+/**
+ * Project a coordinate into the poster frame.
+ *
+ * Scaling x and y independently to fill the frame is what makes a map "look
+ * accurate but feel wrong": a wide viewport squeezed into a tall poster
+ * silently stretches every street and every distance. Mercator only preserves
+ * shape under a single uniform scale, so take the tighter of the two axes and
+ * centre the leftover space.
+ */
 export const projectPosition = (position: Position, frame: PosterFrame): [number, number] => {
   const [west, south, east, north] = frame.bounds
   const [minX, maxY] = mercator([west, south])
   const [maxX, minY] = mercator([east, north])
   const [x, y] = mercator(position)
+
+  const spanX = Math.max(maxX - minX, Number.EPSILON)
+  const spanY = Math.max(maxY - minY, Number.EPSILON)
   const drawableWidth = frame.width - frame.padding * 2
   const drawableHeight = frame.height - frame.padding * 2
-  return [
-    frame.padding + ((x - minX) / Math.max(maxX - minX, Number.EPSILON)) * drawableWidth,
-    frame.padding + ((y - minY) / Math.max(maxY - minY, Number.EPSILON)) * drawableHeight,
-  ]
+  const scale = Math.min(drawableWidth / spanX, drawableHeight / spanY)
+
+  const offsetX = frame.padding + (drawableWidth - spanX * scale) / 2
+  const offsetY = frame.padding + (drawableHeight - spanY * scale) / 2
+  return [offsetX + (x - minX) * scale, offsetY + (y - minY) * scale]
 }
 
 const linePath = (coordinates: Position[], frame: PosterFrame, close = false): string => {

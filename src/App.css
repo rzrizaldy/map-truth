@@ -67,6 +67,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 .prompt-block { max-width: 760px; }
 .prompt-hint { margin: 0; color: var(--muted); font-size: 13px; }
 .prompt-hint--warn { padding: 10px 12px; border-radius: 8px; background: #fef7e0; color: #b06000; }
+.prompt-hint--found { padding: 10px 12px; border-radius: 8px; background: #e6f4ea; color: #137333; }
 .place-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .place-chips-label { font-size: 13px; color: var(--muted); }
 .place-chip { border: 1px solid var(--blue); border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 7px 14px; cursor: pointer; font: 600 13px/1 'Source Sans 3', sans-serif; }
@@ -122,6 +123,23 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 .generation-approval span { display: block; font: 500 11px/1 'IBM Plex Mono', monospace; color: #b06000; }
 .generation-approval strong { display: block; margin-top: 5px; font: 600 18px/1.1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
 .generation-approval p { margin: 0; flex: 1 1 220px; font-size: 13px; color: var(--muted); }
+
+/* ---- full-screen viewer ---- */
+.taste-visual--zoom { position: relative; padding: 0; cursor: zoom-in; border: 1px solid var(--line); background: var(--paper); }
+.taste-zoom-hint { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: rgba(32,33,36,.72); color: #fff; font-size: 15px; opacity: 0; transition: opacity .15s ease; }
+.taste-visual--zoom:hover .taste-zoom-hint, .taste-visual--zoom:focus-visible .taste-zoom-hint { opacity: 1; }
+.lightbox { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: rgba(15,16,18,.94); padding: 16px; cursor: zoom-out; }
+.lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 4px 14px; color: #fff; }
+.lightbox-bar strong { font: 600 20px/1.1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.lightbox-bar span { display: block; margin-top: 3px; font: 500 12px/1.3 'IBM Plex Mono', monospace; color: rgba(255,255,255,.66); }
+.lightbox-close { border: 1px solid rgba(255,255,255,.4); border-radius: 8px; background: transparent; color: #fff; padding: 8px 14px; cursor: pointer; font: 600 13px/1 'Source Sans 3', sans-serif; }
+.lightbox-close:hover { background: rgba(255,255,255,.12); }
+.lightbox-stage { flex: 1; min-height: 0; display: grid; place-items: center; cursor: default; }
+.lightbox-stage > * { max-width: 100%; max-height: 100%; }
+.lightbox-stage img, .lightbox-stage svg { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; box-shadow: 0 12px 48px rgba(0,0,0,.5); }
+.lightbox-stage .taste-example { height: 100%; display: grid; place-items: center; }
+.lightbox-stage .taste-example img { height: 100%; }
+.lightbox-stage .taste-example-tag { display: none; }
 
 /* ---- agent walkthrough ---- */
 .agent-demo { margin-top: 20px; padding: 18px 20px; border: 1px solid var(--blue); border-radius: 12px; background: var(--blue-soft); }

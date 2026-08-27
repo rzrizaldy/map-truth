@@ -90,6 +90,45 @@ test('locking twice in a row keeps working', async ({ page }) => {
   await expect(page.getByText('vector map is still loading')).toHaveCount(0)
 })
 
+test('the prompt pins a real building at its true coordinates', async ({ page }) => {
+  const jakarta = {
+    name: 'Jakarta', label: 'Jakarta, Indonesia',
+    center: [106.8005, -6.2107], bbox: [106.78, -6.23, 106.82, -6.19], zoom: 14, kind: 'city',
+  }
+  const dpr = {
+    name: 'Dewan Perwakilan Rakyat', label: 'Dewan Perwakilan Rakyat, Jakarta',
+    center: [106.80029, -6.2102083], bbox: [106.798, -6.212, 106.802, -6.208], zoom: 16, kind: 'office',
+  }
+  await page.route('**/api/geocode', async (route) => {
+    const body = route.request().postDataJSON() as { center?: unknown; query?: string; within?: unknown }
+    if (body.center) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ place: jakarta }) })
+    const match = body.query === 'DPR' ? dpr : jakarta
+    // A bounded lookup is what keeps "DPR" from resolving to another city.
+    if (body.query === 'DPR') expect(body.within).toBeTruthy()
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ query: body.query, places: [match] }) })
+  })
+
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  await page.getByRole('textbox').fill('Peta demo DPR Jakarta')
+  await page.getByRole('button', { name: 'Go to Jakarta' }).click()
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 25_000 })
+
+  await expect(page.locator('.prompt-hint--found')).toContainText('Dewan Perwakilan Rakyat', { timeout: 20_000 })
+  const pin = page.locator('.truth-layer--poster [data-truth-pin]').first()
+  await expect(pin).toHaveAttribute('data-osm-center', '106.80029,-6.2102083')
+})
+
+test('any result opens full screen and closes again', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('.taste-visual--zoom').first().click()
+  const lightbox = page.locator('.lightbox')
+  await expect(lightbox).toBeVisible()
+  await expect(lightbox.locator('img, svg').first()).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(lightbox).toHaveCount(0)
+})
+
 test('the whole journey lives on one page', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /AI makes up cities/ })).toBeVisible()

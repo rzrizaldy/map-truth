@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Lightbox } from './Lightbox'
 import { approvePendingComparison, cancelGeneration, runGenerationRoute } from '../ai/generation'
 import { PosterSvg } from '../poster/PosterSvg'
 import { appStore, useAppStore } from '../state/store'
@@ -70,6 +71,7 @@ export function ComparisonGrid() {
   const locked = useAppStore((state) => Boolean(state.data.lock))
   const placeName = useAppStore((state) => state.place.name)
   const generated = Object.values(ai.routes).some((route) => route.status === 'ready')
+  const [zoomed, setZoomed] = useState<ComparisonRoute | null>(null)
 
   return (
     <section className={`step ${generated ? 'step--done' : 'step--waiting'}`} id="step-3">
@@ -100,7 +102,15 @@ export function ComparisonGrid() {
               <div className="taste-number">{copy.number}</div>
               <h3>{copy.title}</h3>
               <p>{route === 'mapTruthGrounded' && locked ? `Real streets of ${placeName}, styled by AI.` : copy.description}</p>
-              <div className="taste-visual"><ResultVisual route={route} state={state} locked={locked} /></div>
+              <button
+                type="button"
+                className="taste-visual taste-visual--zoom"
+                onClick={() => setZoomed(route)}
+                aria-label={`View ${copy.title} full screen`}
+              >
+                <ResultVisual route={route} state={state} locked={locked} />
+                <span className="taste-zoom-hint" aria-hidden="true">⤢</span>
+              </button>
               <div className="card-status-row">
                 <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>
                 {state.durationMs ? <span className="route-duration">{(state.durationMs / 1000).toFixed(0)}s</span> : null}
@@ -113,6 +123,16 @@ export function ComparisonGrid() {
         })}
       </div>
       <p className="taste-footnote">Map data © OpenStreetMap contributors</p>
+
+      {zoomed ? (
+        <Lightbox
+          title={routeCopy[zoomed].title}
+          caption={ai.routes[zoomed].status === 'ready' ? undefined : `Example · "${EXAMPLE_PROMPT}"`}
+          onClose={() => setZoomed(null)}
+        >
+          <ResultVisual route={zoomed} state={ai.routes[zoomed]} locked={locked} />
+        </Lightbox>
+      ) : null}
     </section>
   )
 }

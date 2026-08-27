@@ -44,6 +44,7 @@ const baseState = (): MapTruthState => ({
       'A vintage travel poster of Jakarta at sunset.',
     routes: emptyRoutes(),
   },
+  truthPins: [],
   activity: [],
 })
 

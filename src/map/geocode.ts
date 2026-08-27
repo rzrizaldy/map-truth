@@ -17,10 +17,13 @@ const post = async (body: unknown): Promise<{ places?: GeocodedPlace[]; place?: 
   return response.status >= 500 ? null : payload
 }
 
-export const geocodePlace = async (query: string): Promise<GeocodeOutcome> => {
+export const geocodePlace = async (
+  query: string,
+  within?: [number, number, number, number],
+): Promise<GeocodeOutcome> => {
   let payload: Awaited<ReturnType<typeof post>>
   try {
-    payload = await post({ query })
+    payload = await post(within ? { query, within } : { query })
   } catch {
     return { ok: false, reason: 'unavailable' }
   }
@@ -37,4 +40,13 @@ export const describeViewport = async (center: [number, number]): Promise<Geocod
   } catch {
     return null
   }
+}
+
+/** Look a term up strictly inside the locked viewport. Never throws. */
+export const lookupWithinViewport = async (
+  query: string,
+  within: [number, number, number, number],
+): Promise<GeocodedPlace | null> => {
+  const outcome = await geocodePlace(query, within)
+  return outcome.ok ? outcome.place : null
 }

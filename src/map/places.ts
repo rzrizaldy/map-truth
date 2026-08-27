@@ -31,6 +31,12 @@ const STOPWORDS = new Set([
   'create', 'make', 'draw', 'generate', 'render', 'show', 'i', 'want', 'please', 'like',
   'black', 'white', 'cream', 'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'grey', 'gray',
   'gpt', 'image', 'ai', 'if', 'it', 'had', 'has', 'lived', 'here', 'were', 'was', 'be',
+  // Prompts are not always in English. These are the words for map / city /
+  // street / building that would otherwise read as the name of a place.
+  'peta', 'kota', 'jalan', 'gedung', 'daerah', 'wisata', 'demo', 'aksi',
+  'mapa', 'mappa', 'carte', 'karte', 'kaart', 'kart', 'harita', 'harta',
+  'ciudad', 'ville', 'stadt', 'citta', 'cidade', 'stad',
+  'plano', 'plan', 'affiche', 'cartel', 'plakat',
 ])
 
 // Style words that look exactly like places. "A 1970s Swiss travel poster of

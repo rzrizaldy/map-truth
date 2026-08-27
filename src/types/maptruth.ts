@@ -1,4 +1,5 @@
 import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
+import type { TruthPin } from '../map/truthPins'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
 export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
@@ -102,6 +103,8 @@ export type MapTruthState = {
     bbox: [number, number, number, number]
   }
   selection?: HumanSelection
+  /** Real OSM coordinates for things the prompt named, inside the lock. */
+  truthPins: TruthPin[]
   poster: {
     spec: PosterSpec
     status: 'empty' | 'rendering' | 'ready' | 'error'

@@ -1,6 +1,7 @@
 import type { SourceFeature } from '../types/maptruth'
 import { contextBounds, featuresInContext } from '../map/context'
-import { geometryAnchor, geometryToPath, type PosterFrame } from './projection'
+
+import { geometryAnchor, geometryToPath, projectPosition, type PosterFrame } from './projection'
 import { useAppStore } from '../state/store'
 import { posterTitleFromPrompt } from './title'
 import barlowData from '@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2?inline'
@@ -83,9 +84,16 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   const features = (drawn.length > 40 ? drawn : inContext).sort(
     (a, b) => layerOrder[a.properties.type] - layerOrder[b.properties.type],
   )
+  // Whatever the prompt named, pinned at the coordinates OpenStreetMap gives
+  // it — the poster answering the brief with evidence instead of the model
+  // inventing a plausible location.
+  const pinned = state.truthPins
   const emphasized = new Set(spec.emphasizedFeatureIds)
   const mapTransform = 'translate(0 150)'
   const posterTitle = posterTitleFromPrompt(state.ai.prompt, state.place.name)
+  const overArt = Boolean(backgroundImage) && !sourceMode
+  const headText = overArt ? '#ffffff' : sourceMode ? '#202124' : palette.ink
+  const subText = overArt ? 'rgba(255,255,255,.86)' : '#5f6368'
   const headline = posterTitle.toUpperCase()
   // Barlow Condensed runs ~0.46em per glyph. Shrink to fit, then let SVG
   // compress the rest so a long prompt can never bleed off the canvas.
@@ -111,15 +119,17 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
       `}</style>
       <defs>
         <clipPath id={`map-clip-${id ?? 'preview'}`}><rect x="0" y="150" width="1200" height="1180" /></clipPath>
+        {/* Neutral scrims, not paper-coloured ones: the art decides the palette,
+            MapTruth only has to stay legible on top of whatever it chose. */}
         <linearGradient id={`scrim-${id ?? 'preview'}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={palette.paper} stopOpacity="0.97" />
-          <stop offset="0.72" stopColor={palette.paper} stopOpacity="0.82" />
-          <stop offset="1" stopColor={palette.paper} stopOpacity="0" />
+          <stop offset="0" stopColor="#0b0c0e" stopOpacity="0.72" />
+          <stop offset="0.68" stopColor="#0b0c0e" stopOpacity="0.42" />
+          <stop offset="1" stopColor="#0b0c0e" stopOpacity="0" />
         </linearGradient>
         <linearGradient id={`foot-${id ?? 'preview'}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={palette.paper} stopOpacity="0" />
-          <stop offset="0.3" stopColor={palette.paper} stopOpacity="0.92" />
-          <stop offset="1" stopColor={palette.paper} stopOpacity="0.98" />
+          <stop offset="0" stopColor="#0b0c0e" stopOpacity="0" />
+          <stop offset="0.35" stopColor="#0b0c0e" stopOpacity="0.6" />
+          <stop offset="1" stopColor="#0b0c0e" stopOpacity="0.82" />
         </linearGradient>
         <pattern id={`grid-${id ?? 'preview'}`} width="48" height="48" patternUnits="userSpaceOnUse">
           <path d="M48 0H0V48" fill="none" stroke={palette.ink} strokeOpacity="0.08" strokeWidth="1" />
@@ -157,6 +167,43 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
             />
           )
         })}
+        {/* Truth pins: the real coordinates of whatever the prompt named. */}
+        {pinned.map((pin) => {
+          const [x, y] = projectPosition(pin.center, frame)
+          return (
+            <g key={`pin-${pin.term}`} data-truth-pin={pin.name} data-osm-center={pin.center.join(',')}>
+              <circle cx={x} cy={y} r="26" fill="#ea4335" fillOpacity="0.18" />
+              <path
+                d={`M${x} ${y - 34}a15 15 0 0 1 15 15c0 11-15 27-15 27s-15-16-15-27a15 15 0 0 1 15-15z`}
+                fill="#ea4335"
+                stroke="#ffffff"
+                strokeWidth="3.5"
+                strokeLinejoin="round"
+              />
+              <circle cx={x} cy={y - 19} r="5.5" fill="#ffffff" />
+            </g>
+          )
+        })}
+        {pinned.map((pin) => {
+          const [x, y] = projectPosition(pin.center, frame)
+          return (
+            <text
+              key={`pin-label-${pin.term}`}
+              x={x}
+              y={y + 30}
+              className="poster-title"
+              textAnchor="middle"
+              fontSize="30"
+              fill="#141416"
+              stroke="#ffffff"
+              strokeWidth="7"
+              paintOrder="stroke"
+              data-untrusted-source="openstreetmap-name"
+            >
+              {pin.name}
+            </text>
+          )
+        })}
         {features.map((feature, index) => {
           const isEmphasized = emphasized.has(feature.properties.id)
           if (!shouldLabel(feature, spec.labelDensity, index, isEmphasized)) return null
@@ -170,8 +217,8 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
               textAnchor="middle"
               fontSize={isEmphasized ? 22 : 14}
               letterSpacing="0.04em"
-              fill={sourceMode ? '#202124' : palette.ink}
-              stroke={sourceMode ? '#f1f3f4' : palette.paper}
+              fill="#141416"
+              stroke="#ffffff"
               strokeWidth="5"
               paintOrder="stroke"
               data-untrusted-source="openstreetmap-name"
@@ -191,15 +238,15 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         letterSpacing="-0.025em"
         textLength={titleTooLong ? 1080 : undefined}
         lengthAdjust="spacingAndGlyphs"
-        fill={sourceMode ? '#202124' : palette.ink}
+        fill={headText}
       >
         {headline}
       </text>
-      <text x="62" y="200" className="poster-copy" fontSize="26" fill={sourceMode ? '#5f6368' : palette.ink}>
+      <text x="62" y="200" className="poster-copy" fontSize="26" fill={subText}>
         {`${state.place.name} · every line drawn from OpenStreetMap`}
       </text>
       {sourceMode ? (
-        <text x="1140" y="200" className="poster-mono" textAnchor="end" fontSize="15" letterSpacing="0.12em" fill="#5f6368">
+        <text x="1140" y="200" className="poster-mono" textAnchor="end" fontSize="15" letterSpacing="0.12em" fill={subText}>
           SOURCE GEOMETRY
         </text>
       ) : null}
@@ -225,7 +272,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
                 ) : (
                   <path d={`M${x} 1397h22`} fill="none" stroke={swatch.stroke} strokeWidth="3" strokeLinecap="round" />
                 )}
-                <text x={x + 30} y="1402" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink}>
+                <text x={x + 30} y="1402" className="poster-mono" fontSize="13" fill={subText}>
                   {item.label}
                 </text>
               </g>
@@ -233,15 +280,15 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
           })}
         </g>
       ) : null}
-      <text x="60" y="1444" className="poster-mono" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
+      <text x="60" y="1444" className="poster-mono" fontSize="15" fill={subText}>
         MAP DATA © OPENSTREETMAP CONTRIBUTORS · ODbL 1.0
       </text>
-      <text x="1140" y="1444" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
+      <text x="1140" y="1444" className="poster-mono" textAnchor="end" fontSize="15" fill={subText}>
         {features.length === inContext.length
           ? `${features.length.toLocaleString()} ${state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES`
           : `${features.length.toLocaleString()} OF ${inContext.length.toLocaleString()} ${state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES`}
       </text>
-      <text x="60" y="1478" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink} opacity="0.7">
+      <text x="60" y="1478" className="poster-mono" fontSize="13" fill={subText} opacity="0.75">
         MAPTRUTH / {state.data.lock?.sourceRevision?.toUpperCase() ?? 'NO LOCK'} / {state.data.lock?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}
       </text>
     </svg>

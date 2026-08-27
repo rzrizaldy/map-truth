@@ -2,7 +2,7 @@ import type { GeocodedPlace } from '../src/map/placeTypes.js'
 
 export const config = { maxDuration: 30 }
 
-type GeocodeRequest = { query?: unknown; center?: unknown }
+type GeocodeRequest = { query?: unknown; center?: unknown; within?: unknown }
 
 type NominatimPlace = {
   display_name?: string
@@ -99,8 +99,20 @@ export async function POST(request: Request): Promise<Response> {
   const query = typeof body.query === 'string' ? body.query.trim().slice(0, 120) : ''
   if (!query) return json({ error: 'query_required' }, { status: 400 })
 
+  // `within` restricts the search to the locked viewport, which is how "DPR"
+  // resolves to the parliament building in Jakarta instead of a road with the
+  // same initials on another continent.
+  let bounded = ''
+  if (Array.isArray(body.within) && body.within.length === 4) {
+    const box = body.within.map(Number)
+    if (box.every(Number.isFinite)) {
+      const [west, south, east, north] = box
+      bounded = `&viewbox=${west},${north},${east},${south}&bounded=1`
+    }
+  }
+
   try {
-    const payload = (await nominatim(`/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`)) as NominatimPlace[]
+    const payload = (await nominatim(`/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}${bounded}`)) as NominatimPlace[]
     const places = (Array.isArray(payload) ? payload : []).map(toGeocodedPlace).filter((place): place is GeocodedPlace => place !== null)
     if (!places.length) return json({ error: 'place_not_found', query }, { status: 404 })
     return json({ query, places })

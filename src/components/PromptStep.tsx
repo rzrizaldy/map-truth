@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { generateComparisonManually } from '../ai/generation'
 import { extractPlaceMentions, promptMatchesPlace } from '../map/places'
 import { focusPlace } from '../webmcp/commands'
+import { syncTruthPins } from '../map/pinSync'
 import { appStore, useAppStore } from '../state/store'
 
 export function PromptStep() {
@@ -14,6 +15,15 @@ export function PromptStep() {
   const [problem, setProblem] = useState<{ query: string; reason: string } | null>(null)
 
   const mentions = useMemo(() => extractPlaceMentions(prompt), [prompt])
+  const pins = useAppStore((state) => state.truthPins)
+  const lockId = useAppStore((state) => state.data.lock?.id)
+
+  // Look the prompt's named things up in OpenStreetMap once the user pauses.
+  useEffect(() => {
+    if (!lockId) return
+    const timer = window.setTimeout(() => void syncTruthPins(), 700)
+    return () => window.clearTimeout(timer)
+  }, [prompt, lockId])
   const anyRunning = Object.values(routes).some((route) => route.status === 'generating' || route.status === 'queued')
   const matches = promptMatchesPlace(mentions, place.name, place.label, place.query)
 
@@ -77,6 +87,12 @@ export function PromptStep() {
             Your prompt mentions {mentions.map((mention) => mention.text).join(' and ')}, but the map is somewhere else
             {place.source === 'live' ? '' : ` (${place.name})`}. The grounded image will follow the map, not the prompt — use a
             button above to move it.
+          </p>
+        ) : null}
+
+        {pins.length ? (
+          <p className="prompt-hint prompt-hint--found">
+            Found in OpenStreetMap: {pins.map((pin) => pin.name).join(', ')} — pinned at real coordinates on the grounded image.
           </p>
         ) : null}
 
