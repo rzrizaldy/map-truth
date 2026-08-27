@@ -1,7 +1,8 @@
 import type { Polygon } from 'geojson'
 
 export const MAX_BBOX_SPAN_DEGREES = 0.09
-export const MAX_LIVE_BBOX_SPAN_DEGREES = 0.3
+// Wide monitors at the minimum focus zoom still land comfortably inside this.
+export const MAX_LIVE_BBOX_SPAN_DEGREES = 0.4
 
 export const bboxSpanOk = (bbox: [number, number, number, number]) => {
   const [west, south, east, north] = bbox

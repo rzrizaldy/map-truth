@@ -24,13 +24,22 @@ const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
 
 const CONTACT = 'MapTruth/1.0 (https://map-truth.vercel.app)'
 
-// Nominatim returns a bbox for every result. Turning it into a zoom keeps the
-// locked viewport tight enough that `lock_live_osm` sees real detail.
+/**
+ * Turn a Nominatim bbox into a camera zoom.
+ *
+ * The floor matters: an administrative area like "Daerah Khusus Ibukota
+ * Jakarta" has a bbox spanning well over a degree, and framing all of it would
+ * put the viewport past the span the live lock accepts — focusing a big city
+ * would move the map and then refuse to lock it. A district-scale view is both
+ * lockable and what someone asking for a city poster actually wants.
+ */
+export const MIN_FOCUS_ZOOM = 12.5
+
 export const zoomForBbox = ([west, south, east, north]: [number, number, number, number]) => {
   const span = Math.max(east - west, (north - south) * 1.6)
   if (!Number.isFinite(span) || span <= 0) return 14
   const zoom = Math.log2(360 / span) + 0.4
-  return Math.min(16, Math.max(10, Number(zoom.toFixed(2))))
+  return Math.min(16, Math.max(MIN_FOCUS_ZOOM, Number(zoom.toFixed(2))))
 }
 
 export const toGeocodedPlace = (place: NominatimPlace): GeocodedPlace | null => {
