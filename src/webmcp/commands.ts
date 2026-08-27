@@ -37,7 +37,6 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
     placeSource: state.place.source,
     bbox: state.map.bbox.map((value) => Number(value.toFixed(6))),
     hasSelection: Boolean(state.selection),
-    hasDrawnRoute: state.selection?.kind === 'route',
     featureCount: contextFeatures.length,
     lock: state.data.lock ? {
       id: state.data.lock.id,

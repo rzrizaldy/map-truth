@@ -1,4 +1,4 @@
-import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from 'geojson'
+import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
 export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
@@ -37,9 +37,8 @@ export type PosterSpec = {
   showLegend: boolean
 }
 
-export type HumanSelection =
-  | { kind: 'route'; id: string; geometry: LineString; geometryHash: string }
-  | { kind: 'area'; id: string; geometry: Polygon; geometryHash: string }
+// The locked viewport is the only selection MapTruth makes.
+export type HumanSelection = { kind: 'area'; id: string; geometry: Polygon; geometryHash: string }
 
 export type ActivityEntry = {
   id: string

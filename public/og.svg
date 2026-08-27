@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="MapTruth — one prompt, three levels of map grounding">
+  <rect width="1200" height="630" fill="#f8f9fa"/>
+  <g stroke="#dadce0" stroke-width="1">
+    <path d="M0 90H1200M0 200H1200M0 310H1200M0 420H1200M0 530H1200"/>
+    <path d="M150 0V630M330 0V630M510 0V630M690 0V630M870 0V630M1050 0V630"/>
+  </g>
+  <path d="M-20 470C160 470 220 300 400 300S640 150 900 150 1120 60 1240 60" fill="none" stroke="#aadaff" stroke-width="34"/>
+  <g fill="none" stroke="#1a73e8" stroke-linecap="round">
+    <path d="M240 0V630M620 0V630M980 0V630" stroke-width="5"/>
+    <path d="M0 250H1200M0 400H1200" stroke-width="4"/>
+  </g>
+  <rect x="0" y="0" width="1200" height="630" fill="#f8f9fa" opacity="0.74"/>
+  <text x="72" y="196" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="86" fill="#202124" letter-spacing="-1">ART DIRECTION CAN WANDER.</text>
+  <text x="72" y="286" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="86" fill="#1a73e8" letter-spacing="-1">GEOGRAPHY CANNOT.</text>
+  <text x="74" y="350" font-family="Arial, Helvetica, sans-serif" font-size="27" fill="#5f6368">One prompt, three images — the only difference is how much real map the AI was given.</text>
+  <g font-family="monospace" font-size="21" fill="#202124">
+    <rect x="72" y="404" width="316" height="62" rx="10" fill="#ffffff" stroke="#dadce0"/>
+    <text x="96" y="443">1 · PROMPT ONLY</text>
+    <rect x="416" y="404" width="316" height="62" rx="10" fill="#ffffff" stroke="#dadce0"/>
+    <text x="440" y="443">2 · SCREENSHOT</text>
+    <rect x="760" y="404" width="368" height="62" rx="10" fill="#e8f0fe" stroke="#1a73e8"/>
+    <text x="784" y="443" fill="#1557b0">3 · WEBMCP MAP TRUTH</text>
+  </g>
+  <rect x="0" y="500" width="1200" height="130" fill="#f8f9fa"/>
+  <rect x="0" y="500" width="1200" height="1" fill="#dadce0"/>
+  <text x="72" y="552" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="34" fill="#202124" letter-spacing="1">MAPTRUTH</text>
+  <text x="72" y="588" font-family="monospace" font-size="17" fill="#5f6368">Live OpenStreetMap · WebMCP · GPT Image 2 · map data © OpenStreetMap contributors</text>
+</svg>

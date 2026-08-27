@@ -57,12 +57,11 @@ const shouldLabel = (feature: SourceFeature, density: string, index: number, emp
   return index % 8 === 0
 }
 
-const legendLayers = (hasRoute: boolean) => [
+const legendLayers = () => [
   { key: 'road', label: 'Roads' },
   { key: 'water', label: 'Water' },
   { key: 'park', label: 'Parks' },
   { key: 'landmark', label: 'Landmarks' },
-  ...(hasRoute ? [{ key: 'route', label: 'Drawn route' }] : []),
 ] as const
 
 export function PosterSvg({ id, sourceMode = false, backgroundImage, className }: PosterSvgProps) {
@@ -76,7 +75,6 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   )
   const emphasized = new Set(spec.emphasizedFeatureIds)
   const mapTransform = 'translate(0 300)'
-  const routePath = state.selection?.kind === 'route' ? geometryToPath(state.selection.geometry, frame) : ''
   const frameCode = `${bounds[0].toFixed(3)} / ${bounds[1].toFixed(3)} — ${bounds[2].toFixed(3)} / ${bounds[3].toFixed(3)}`
 
   return (
@@ -102,7 +100,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
           <path d="M48 0H0V48" fill="none" stroke={palette.ink} strokeOpacity="0.08" strokeWidth="1" />
         </pattern>
       </defs>
-      <rect width="1200" height="1500" fill={sourceMode ? '#ECECE5' : palette.paper} />
+      <rect width="1200" height="1500" fill={sourceMode ? '#f1f3f4' : palette.paper} />
       {backgroundImage && !sourceMode ? (
         <>
           <image href={backgroundImage} width="1200" height="1500" preserveAspectRatio="xMidYMid slice" opacity="0.55" />
@@ -135,22 +133,6 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
             />
           )
         })}
-        {routePath ? (
-          <>
-            <path d={routePath} fill="none" stroke={sourceMode ? '#FFF9EC' : palette.paper} strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
-            <path
-              d={routePath}
-              fill="none"
-              stroke={sourceMode ? '#D43D28' : palette.accent}
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              data-source-id={state.selection?.id}
-              data-geometry-hash={state.selection?.geometryHash}
-              data-feature-class="human-geometry"
-            />
-          </>
-        ) : null}
         {features.map((feature, index) => {
           const isEmphasized = emphasized.has(feature.properties.id)
           if (!shouldLabel(feature, spec.labelDensity, index, isEmphasized)) return null
@@ -164,8 +146,8 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
               textAnchor="middle"
               fontSize={isEmphasized ? 22 : 14}
               letterSpacing="0.04em"
-              fill={sourceMode ? '#141512' : palette.ink}
-              stroke={sourceMode ? '#ECECE5' : palette.paper}
+              fill={sourceMode ? '#202124' : palette.ink}
+              stroke={sourceMode ? '#f1f3f4' : palette.paper}
               strokeWidth="5"
               paintOrder="stroke"
               data-untrusted-source="openstreetmap-name"
@@ -176,29 +158,31 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         })}
       </g>
 
-      <path d="M60 70H1140" stroke={sourceMode ? '#141512' : palette.accent} strokeWidth="12" />
-      <text x="64" y="157" className="poster-title" fontSize="88" letterSpacing="-0.025em" fill={sourceMode ? '#141512' : palette.ink}>
+      <path d="M60 70H1140" stroke={sourceMode ? '#202124' : palette.accent} strokeWidth="12" />
+      <text x="64" y="157" className="poster-title" fontSize="88" letterSpacing="-0.025em" fill={sourceMode ? '#202124' : palette.ink}>
         {sourceMode ? 'SOURCE GEOMETRY' : spec.title.toUpperCase()}
       </text>
-      <text x="67" y="213" className="poster-copy" fontSize="27" fill={sourceMode ? '#62645D' : palette.ink}>
-        {sourceMode ? 'Neutral rendering — same IDs, bounds, projection, and hashes' : spec.subtitle}
+      <text x="67" y="213" className="poster-copy" fontSize="27" fill={sourceMode ? '#5f6368' : palette.ink}>
+        {sourceMode
+          ? 'Neutral rendering — same IDs, bounds, projection, and hashes'
+          : `${features.length.toLocaleString()} source-backed paths · ${state.data.lock?.kind === 'verified' ? 'canonical OpenStreetMap' : 'live OpenStreetMap tiles'}`}
       </text>
-      <text x="67" y="260" className="poster-mono" fontSize="15" letterSpacing="0.12em" fill={sourceMode ? '#62645D' : palette.accent}>
+      <text x="67" y="260" className="poster-mono" fontSize="15" letterSpacing="0.12em" fill={sourceMode ? '#5f6368' : palette.accent}>
         {sourceMode ? 'NEUTRAL SOURCE VIEW' : state.place.name.toUpperCase()}  /  {frameCode}
       </text>
 
-      <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#62645D' : palette.ink} />
+      <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#dadce0' : palette.ink} />
       {spec.showLegend ? (
         <g data-legend="osm-layers">
-          {legendLayers(state.selection?.kind === 'route').map((item, index) => {
+          {legendLayers().map((item, index) => {
             const x = 60 + index * 210
             const swatch = item.key === 'park'
-              ? { fill: sourceMode ? '#DADBD1' : palette.park, stroke: sourceMode ? '#85877F' : palette.ink }
+              ? { fill: sourceMode ? '#e6efe3' : palette.park, stroke: sourceMode ? '#c3d6bd' : palette.park }
               : item.key === 'water'
-                ? { fill: 'none', stroke: sourceMode ? '#789BA4' : palette.water }
+                ? { fill: 'none', stroke: sourceMode ? '#bfe0ff' : palette.water }
                 : item.key === 'landmark'
-                  ? { fill: sourceMode ? '#141512' : palette.ink, stroke: sourceMode ? '#FFF9EC' : palette.paper }
-                  : { fill: 'none', stroke: item.key === 'route' ? (sourceMode ? '#D43D28' : palette.accent) : (sourceMode ? '#7C7E78' : palette.ink) }
+                  ? { fill: sourceMode ? '#5f6368' : palette.ink, stroke: '#ffffff' }
+                  : { fill: 'none', stroke: sourceMode ? '#9aa0a6' : palette.ink }
             return (
               <g key={item.key} data-legend-item={item.key}>
                 {item.key === 'park' ? (
@@ -206,9 +190,9 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
                 ) : item.key === 'landmark' ? (
                   <circle cx={x + 11} cy="1391" r="6" fill={swatch.fill} stroke={swatch.stroke} strokeWidth="1.5" />
                 ) : (
-                  <path d={`M${x} 1391h22`} fill="none" stroke={swatch.stroke} strokeWidth={item.key === 'route' ? 5 : 3} strokeLinecap="round" />
+                  <path d={`M${x} 1391h22`} fill="none" stroke={swatch.stroke} strokeWidth="3" strokeLinecap="round" />
                 )}
-                <text x={x + 30} y="1396" className="poster-mono" fontSize="13" fill={sourceMode ? '#62645D' : palette.ink}>
+                <text x={x + 30} y="1396" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink}>
                   {item.label}
                 </text>
               </g>
@@ -216,13 +200,13 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
           })}
         </g>
       ) : null}
-      <text x="60" y="1438" className="poster-mono" fontSize="15" fill={sourceMode ? '#62645D' : palette.ink}>
+      <text x="60" y="1438" className="poster-mono" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
         MAP DATA © OPENSTREETMAP CONTRIBUTORS · ODbL 1.0
       </text>
-      <text x="1140" y="1438" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#62645D' : palette.ink}>
+      <text x="1140" y="1438" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
         {features.length.toLocaleString()} {state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES
       </text>
-      <text x="60" y="1474" className="poster-mono" fontSize="13" fill={sourceMode ? '#62645D' : palette.ink} opacity="0.7">
+      <text x="60" y="1474" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink} opacity="0.7">
         MAPTRUTH / {state.data.lock?.sourceRevision?.toUpperCase() ?? 'NO LOCK'} / {state.data.lock?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}
       </text>
     </svg>

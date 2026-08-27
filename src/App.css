@@ -143,4 +143,8 @@ footer a { font: 500 12px/1.4 'IBM Plex Mono', monospace; }
   .taste-grid { grid-template-columns: 1fr; }
   .step { padding: 16px; }
   .map-shell { height: 62vh; }
+  .section-kicker { font-size: 11px; letter-spacing: .06em; }
+  .status-rail { font-size: 11px; }
+  .generation-approval { flex-direction: column; align-items: stretch; }
+  .seam-actions .button--small { flex: 1 1 auto; }
 }
