@@ -3,7 +3,15 @@ import { approvePendingComparison, cancelGeneration, runGenerationRoute } from '
 import { PosterSvg } from '../poster/PosterSvg'
 import { appStore, useAppStore } from '../state/store'
 import type { ComparisonRoute, GenerationRouteState } from '../types/maptruth'
-import { lockLiveOsm } from '../webmcp/commands'
+
+// A real run captured from production. Judges and first-time visitors see the
+// payoff immediately instead of three empty boxes and a two-minute wait.
+export const EXAMPLE_PROMPT = 'A 1970s Swiss travel poster of Kyoto in autumn'
+const exampleImage: Record<ComparisonRoute, string> = {
+  promptOnly: '/example/level-1.jpg',
+  screenshotGrounded: '/example/level-2.jpg',
+  mapTruthGrounded: '/example/level-3.jpg',
+}
 
 const routeCopy: Record<ComparisonRoute, { number: string; title: string; description: string; risk: string; riskClass: string }> = {
   promptOnly: { number: 'FIRST', title: 'Made up', description: 'The AI never saw a map. It invents the streets.', risk: 'Not a real place', riskClass: 'high' },
@@ -46,16 +54,15 @@ function ResultVisual({ route, state, locked }: { route: ComparisonRoute; state:
       </div>
     )
   }
-  if (route === 'mapTruthGrounded') {
-    return locked ? <PosterSvg /> : (
-      <div className="taste-empty">
-        <strong>Pick a place first</strong>
-        <span>This one needs a real map to stand on.</span>
-        <button type="button" onClick={() => void lockLiveOsm()}>Use the current view</button>
-      </div>
-    )
-  }
-  return <div className="taste-empty">{route === 'promptOnly' ? <>Nothing to go on</> : <>Copied by eye</>}</div>
+  // Once a place is locked, the grounded card previews the real streets it
+  // will use — that preview is more informative than an example.
+  if (route === 'mapTruthGrounded' && locked) return <PosterSvg />
+  return (
+    <div className="taste-example">
+      <img src={exampleImage[route]} alt={`Example ${routeCopy[route].title.toLowerCase()} result for ${EXAMPLE_PROMPT}`} loading="lazy" />
+      <span className="taste-example-tag">Example</span>
+    </div>
+  )
 }
 
 export function ComparisonGrid() {

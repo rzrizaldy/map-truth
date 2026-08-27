@@ -146,7 +146,13 @@ export function MapStudio() {
       const startedAt = performance.now()
       const bbox = boundsTuple(map)
       const zoom = map.getZoom()
-      if (!map.loaded() || !map.isStyleLoaded()) {
+      // `map.loaded()` is false whenever any tile is in flight, which is most of
+      // the time right after a camera move — an agent locking twice in a row
+      // would be told the map was not ready while thousands of features sat
+      // queryable. Only a missing style is genuinely blocking; for tiles still
+      // arriving, wait rather than refuse.
+      if (!map.isStyleLoaded()) await settleTiles(6_000)
+      if (!map.isStyleLoaded()) {
         addActivity('lock_live_osm', 'needs_user_action', 'The vector map is still loading', { source })
         return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
       }

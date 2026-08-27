@@ -37,6 +37,59 @@ test('warns when the prompt names somewhere the map is not', async ({ page }) =>
   await expect(page.getByText(/your prompt mentions Jakarta, but the map is somewhere else/i)).toBeVisible({ timeout: 15_000 })
 })
 
+test('a first-time visitor sees a finished example, not empty boxes', async ({ page }) => {
+  await page.goto('/')
+  const examples = page.locator('.taste-example img')
+  await expect(examples).toHaveCount(3)
+  // Every example must actually load; a broken src would leave the demo blank.
+  for (let index = 0; index < 3; index += 1) {
+    await expect.poll(() => examples.nth(index).evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0)
+  }
+})
+
+test('the agent walkthrough runs the real tools and stops at the cost gate', async ({ page }) => {
+  const jakarta = {
+    name: 'Jakarta', label: 'Jakarta, Indonesia',
+    center: [106.8272, -6.1751], bbox: [106.75, -6.25, 106.9, -6.1], zoom: 12.5, kind: 'city',
+  }
+  await page.route('**/api/geocode', async (route) => {
+    const body = route.request().postDataJSON() as { center?: unknown }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body.center ? { place: jakarta } : { query: 'Jakarta', places: [jakarta] }),
+    })
+  })
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+
+  await page.getByRole('button', { name: 'Run the agent on Jakarta' }).click()
+
+  // Every step must succeed — a blocked step means an agent could not complete
+  // the flow either.
+  await expect(page.locator('.agent-step--done')).toHaveCount(5, { timeout: 60_000 })
+  await expect(page.locator('.agent-step--blocked')).toHaveCount(0)
+  await expect(page.locator('.agent-step').filter({ hasText: 'verify_geography' }))
+    .toContainText('every shape matches its source')
+
+  // It must stop for a human rather than spending money on its own.
+  await expect(page.getByText('ONE LAST CHECK')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Make them' })).toBeVisible()
+})
+
+test('locking twice in a row keeps working', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
+  const use = page.locator('#step-2').getByRole('button', { name: /Use this view/ })
+  await use.click()
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
+  // `map.loaded()` is false while tiles stream, which used to reject the second lock.
+  await use.click()
+  await expect(page.locator('.map-meta')).toContainText('real shapes')
+  await expect(page.getByText('vector map is still loading')).toHaveCount(0)
+})
+
 test('the whole journey lives on one page', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /AI makes up cities/ })).toBeVisible()

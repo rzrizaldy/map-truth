@@ -2,7 +2,10 @@ import type { Geometry } from 'geojson'
 import { hashGeometrySync } from '../lib/hash'
 import type { FeatureClass, GeographyLock, SourceFeature } from '../types/maptruth'
 
-export const LIVE_OSM_SOURCE_REVISION = 'openfreemap-positron-live-v1'
+// Bump when the shape of a cached SourceFeature changes. The IndexedDB lock
+// cache keys off this, so a stale entry from an older schema (missing `rank`,
+// say) can never be served to a returning visitor.
+export const LIVE_OSM_SOURCE_REVISION = 'openfreemap-positron-live-v2'
 
 export type ViewportCandidate = {
   source: string

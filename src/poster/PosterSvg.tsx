@@ -34,8 +34,9 @@ const featureStyle = (
     if (feature.properties.type === 'landmark') return { fill: '#5f6368', stroke: '#ffffff', strokeWidth: 1.5 }
     const sourceRank = feature.properties.rank ?? 7
     if (emphasized) return { fill: 'none', stroke: '#202124', strokeWidth: 4 }
-    if (sourceRank <= 3) return { fill: 'none', stroke: '#80868b', strokeWidth: 2 }
-    return { fill: 'none', stroke: '#bdc1c6', strokeWidth: 1 }
+    if (sourceRank <= 1) return { fill: 'none', stroke: '#80868b', strokeWidth: 2.6 }
+    if (sourceRank <= 3) return { fill: 'none', stroke: '#9aa0a6', strokeWidth: 1.5 }
+    return { fill: 'none', stroke: '#bdc1c6', strokeWidth: 0.9 }
   }
   if (feature.properties.type === 'park') return { fill: palette.park, stroke: 'none', strokeWidth: 0 }
   if (feature.properties.type === 'water') return { fill: palette.water, stroke: palette.water, strokeWidth: emphasized ? 6 : 3 }
@@ -44,10 +45,13 @@ const featureStyle = (
   // instead of one solid black scribble.
   const rank = feature.properties.rank ?? 7
   if (emphasized) return { fill: 'none', stroke: palette.accent, strokeWidth: 6 }
-  if (rank <= 1) return { fill: 'none', stroke: palette.ink, strokeWidth: 3.4 }
-  if (rank <= 3) return { fill: 'none', stroke: palette.ink, strokeWidth: 2.2 }
-  if (rank <= 5) return { fill: 'none', stroke: '#5f6368', strokeWidth: 1.4 }
-  return { fill: 'none', stroke: '#9aa0a6', strokeWidth: 0.9 }
+  // Vector tiles split each road into many short segments, so a few thousand
+  // "roads" is really one dense web. Keep strokes light or the network turns
+  // into a grey mat and buries the art layer underneath.
+  if (rank <= 1) return { fill: 'none', stroke: palette.ink, strokeWidth: 3 }
+  if (rank <= 3) return { fill: 'none', stroke: palette.ink, strokeWidth: 1.7 }
+  if (rank <= 5) return { fill: 'none', stroke: '#5f6368', strokeWidth: 1 }
+  return { fill: 'none', stroke: '#80868b', strokeWidth: 0.7 }
 }
 
 const shouldLabel = (feature: SourceFeature, density: string, index: number, emphasized: boolean) => {
@@ -71,7 +75,12 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   const palette = colors[spec.palette]
   const bounds = contextBounds(state)
   const frame: PosterFrame = { width: 1200, height: 1180, padding: 40, bounds }
-  const features = featuresInContext(state).sort(
+  const inContext = featuresInContext(state)
+  // A printed map generalises: drawing every residential lane turns a poster
+  // into grey noise and buries the generated art. Keep the network that gives a
+  // city its shape. Everything drawn is still source-backed and hash-checked.
+  const drawn = inContext.filter((feature) => feature.properties.type !== 'road' || (feature.properties.rank ?? 9) <= 5)
+  const features = (drawn.length > 40 ? drawn : inContext).sort(
     (a, b) => layerOrder[a.properties.type] - layerOrder[b.properties.type],
   )
   const emphasized = new Set(spec.emphasizedFeatureIds)
@@ -228,7 +237,9 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         MAP DATA © OPENSTREETMAP CONTRIBUTORS · ODbL 1.0
       </text>
       <text x="1140" y="1444" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
-        {features.length.toLocaleString()} {state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES
+        {features.length === inContext.length
+          ? `${features.length.toLocaleString()} ${state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES`
+          : `${features.length.toLocaleString()} OF ${inContext.length.toLocaleString()} ${state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES`}
       </text>
       <text x="60" y="1478" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink} opacity="0.7">
         MAPTRUTH / {state.data.lock?.sourceRevision?.toUpperCase() ?? 'NO LOCK'} / {state.data.lock?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}

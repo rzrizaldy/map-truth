@@ -35,7 +35,7 @@ describe('live OSM viewport normalization', () => {
     const bbox: [number, number, number, number] = [-74.02, 40.72, -73.95, 40.78]
     expect(first[0].properties.id).toBe(second[0].properties.id)
     expect(createLiveLock(first, bbox, 12).geometryHash).toBe(createLiveLock(second, bbox, 12).geometryHash)
-    expect(liveLockCacheKey(bbox, 12)).toContain('openfreemap-positron-live-v1')
+    expect(liveLockCacheKey(bbox, 12)).toContain('openfreemap-positron-live-v2')
     expect(first[0].properties.osmId).toBeUndefined()
   })
 })

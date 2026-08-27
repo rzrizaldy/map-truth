@@ -3,6 +3,7 @@ import { ComparisonGrid } from '../components/ComparisonGrid'
 import { PromptStep } from '../components/PromptStep'
 import { SiteShell } from '../components/SiteShell'
 import { AgentReceiptRail, StatusRail } from '../components/StudioPanels'
+import { AgentWalkthrough } from '../components/AgentWalkthrough'
 import { TruthSeam } from '../poster/TruthSeam'
 import { MapStudio } from '../map/MapStudio'
 import { exportGroundedArtwork, lockLiveOsm, verifyOsmLock } from '../webmcp/commands'
@@ -65,6 +66,8 @@ export function StudioPage() {
 
         <MapStudio />
       </section>
+
+      <AgentWalkthrough />
 
       <ComparisonGrid />
 
