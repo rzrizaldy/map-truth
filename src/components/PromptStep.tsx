@@ -74,8 +74,9 @@ export function PromptStep() {
 
         {locked && !matches ? (
           <p className="prompt-hint prompt-hint--warn">
-            Heads up: your prompt mentions {mentions.map((mention) => mention.text).join(', ')}, but the map is on {place.name}. The
-            grounded image will show {place.name}.
+            Your prompt mentions {mentions.map((mention) => mention.text).join(' and ')}, but the map is somewhere else
+            {place.source === 'live' ? '' : ` (${place.name})`}. The grounded image will follow the map, not the prompt — use a
+            button above to move it.
           </p>
         ) : null}
 

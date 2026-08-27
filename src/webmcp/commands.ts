@@ -182,10 +182,18 @@ export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Pr
   }
   const resolved = outcome.place
 
-  captureUndo(`focus on ${resolved.name}`)
+  // Nominatim answers "Jakarta" with "Daerah Khusus Ibukota Jakarta". Show the
+  // name the user actually used when it is genuinely the same place; the full
+  // official label stays on the record.
+  const asked = query.trim()
+  const displayName = resolved.name.toLowerCase().includes(asked.toLowerCase()) && resolved.name.length > asked.length
+    ? asked
+    : resolved.name
+
+  captureUndo(`focus on ${displayName}`)
   await runtime.navigate(resolved.center, resolved.zoom)
   appStore.setState((state) => ({
-    place: { name: resolved.name, label: resolved.label, source: 'geocoded', resolving: false },
+    place: { name: displayName, label: resolved.label, source: 'geocoded', resolving: false },
     ui: { ...state.ui, canUndo: true },
   }))
   addActivity('focus_place', 'ok', `Map moved to ${resolved.label}`, {
@@ -193,12 +201,12 @@ export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Pr
   })
 
   if (input.lock === false) {
-    return { status: 'ok', place: resolved.name, label: resolved.label, center: resolved.center, zoom: resolved.zoom, locked: false }
+    return { status: 'ok', place: displayName, label: resolved.label, center: resolved.center, zoom: resolved.zoom, locked: false }
   }
   const lock = await runtime.lockLiveOsm('webmcp')
   return {
     ...lock,
-    place: resolved.name,
+    place: displayName,
     label: resolved.label,
     center: resolved.center,
     zoom: resolved.zoom,

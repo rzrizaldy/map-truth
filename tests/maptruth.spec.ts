@@ -34,7 +34,7 @@ test('warns when the prompt names somewhere the map is not', async ({ page }) =>
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
 
   await page.getByRole('textbox').fill('A poster of Jakarta at sunset')
-  await expect(page.getByText(/your prompt mentions Jakarta, but the map is on/i)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/your prompt mentions Jakarta, but the map is somewhere else/i)).toBeVisible({ timeout: 15_000 })
 })
 
 test('the whole journey lives on one page', async ({ page }) => {

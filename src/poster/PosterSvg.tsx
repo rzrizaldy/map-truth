@@ -70,13 +70,18 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   const { spec } = state.poster
   const palette = colors[spec.palette]
   const bounds = contextBounds(state)
-  const frame: PosterFrame = { width: 1200, height: 1050, padding: 60, bounds }
+  const frame: PosterFrame = { width: 1200, height: 1180, padding: 40, bounds }
   const features = featuresInContext(state).sort(
     (a, b) => layerOrder[a.properties.type] - layerOrder[b.properties.type],
   )
   const emphasized = new Set(spec.emphasizedFeatureIds)
-  const mapTransform = 'translate(0 300)'
+  const mapTransform = 'translate(0 150)'
   const posterTitle = posterTitleFromPrompt(state.ai.prompt, state.place.name)
+  const headline = posterTitle.toUpperCase()
+  // Barlow Condensed runs ~0.46em per glyph. Shrink to fit, then let SVG
+  // compress the rest so a long prompt can never bleed off the canvas.
+  const titleSize = Math.min(92, Math.max(46, Math.floor(1080 / (headline.length * 0.46))))
+  const titleTooLong = headline.length * titleSize * 0.46 > 1080
 
   return (
     <svg
@@ -96,7 +101,17 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         .poster-mono{font-family:PlexEmbedded,monospace;font-weight:500}
       `}</style>
       <defs>
-        <clipPath id={`map-clip-${id ?? 'preview'}`}><rect x="0" y="300" width="1200" height="1050" /></clipPath>
+        <clipPath id={`map-clip-${id ?? 'preview'}`}><rect x="0" y="150" width="1200" height="1180" /></clipPath>
+        <linearGradient id={`scrim-${id ?? 'preview'}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={palette.paper} stopOpacity="0.97" />
+          <stop offset="0.72" stopColor={palette.paper} stopOpacity="0.82" />
+          <stop offset="1" stopColor={palette.paper} stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`foot-${id ?? 'preview'}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={palette.paper} stopOpacity="0" />
+          <stop offset="0.3" stopColor={palette.paper} stopOpacity="0.92" />
+          <stop offset="1" stopColor={palette.paper} stopOpacity="0.98" />
+        </linearGradient>
         <pattern id={`grid-${id ?? 'preview'}`} width="48" height="48" patternUnits="userSpaceOnUse">
           <path d="M48 0H0V48" fill="none" stroke={palette.ink} strokeOpacity="0.08" strokeWidth="1" />
         </pattern>
@@ -104,10 +119,9 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
       <rect width="1200" height="1500" fill={sourceMode ? '#f1f3f4' : palette.paper} />
       {backgroundImage && !sourceMode ? (
         <>
-          <image href={backgroundImage} width="1200" height="1500" preserveAspectRatio="xMidYMid slice" opacity="0.55" />
-          {/* Keep the generated art readable underneath: the locked vectors are
-              the point of route 3, so they must never fight the art layer. */}
-          <rect width="1200" height="1500" fill={palette.paper} opacity="0.34" />
+          {/* The art layer carries the poster; scrims behind the type keep the
+              copy legible without washing the whole image out. */}
+          <image href={backgroundImage} width="1200" height="1500" preserveAspectRatio="xMidYMid slice" opacity="0.92" />
         </>
       ) : null}
       {spec.preset === 'blueprint' && !sourceMode ? <rect width="1200" height="1500" fill={`url(#grid-${id ?? 'preview'})`} /> : null}
@@ -159,20 +173,29 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         })}
       </g>
 
-      <path d="M60 70H1140" stroke={sourceMode ? '#202124' : palette.accent} strokeWidth="12" />
-      <text x="64" y="157" className="poster-title" fontSize="88" letterSpacing="-0.025em" fill={sourceMode ? '#202124' : palette.ink}>
-        {sourceMode ? 'SOURCE GEOMETRY' : posterTitle.toUpperCase()}
+      <rect width="1200" height="300" fill={backgroundImage && !sourceMode ? `url(#scrim-${id ?? 'preview'})` : palette.paper} />
+      <text
+        x="60"
+        y="150"
+        className="poster-title"
+        fontSize={titleSize}
+        letterSpacing="-0.025em"
+        textLength={titleTooLong ? 1080 : undefined}
+        lengthAdjust="spacingAndGlyphs"
+        fill={sourceMode ? '#202124' : palette.ink}
+      >
+        {headline}
       </text>
-      <text x="67" y="213" className="poster-copy" fontSize="27" fill={sourceMode ? '#5f6368' : palette.ink}>
-        {sourceMode
-          ? 'Neutral rendering — same IDs, bounds, projection, and hashes'
-          : `${state.place.name} · every line from OpenStreetMap`}
+      <text x="62" y="200" className="poster-copy" fontSize="26" fill={sourceMode ? '#5f6368' : palette.ink}>
+        {`${state.place.name} · every line drawn from OpenStreetMap`}
       </text>
-      <text x="67" y="260" className="poster-mono" fontSize="15" letterSpacing="0.12em" fill={sourceMode ? '#5f6368' : palette.accent}>
-        {sourceMode ? 'NEUTRAL SOURCE VIEW' : state.place.name.toUpperCase()}
-      </text>
+      {sourceMode ? (
+        <text x="1140" y="200" className="poster-mono" textAnchor="end" fontSize="15" letterSpacing="0.12em" fill="#5f6368">
+          SOURCE GEOMETRY
+        </text>
+      ) : null}
 
-      <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#dadce0' : palette.ink} />
+      <rect y="1330" width="1200" height="170" fill={backgroundImage && !sourceMode ? `url(#foot-${id ?? 'preview'})` : palette.paper} />
       {spec.showLegend ? (
         <g data-legend="osm-layers">
           {legendLayers().map((item, index) => {
@@ -187,13 +210,13 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
             return (
               <g key={item.key} data-legend-item={item.key}>
                 {item.key === 'park' ? (
-                  <rect x={x} y="1384" width="22" height="14" fill={swatch.fill} stroke={swatch.stroke} strokeWidth="1.5" />
+                  <rect x={x} y="1390" width="22" height="14" fill={swatch.fill} stroke={swatch.stroke} strokeWidth="1.5" />
                 ) : item.key === 'landmark' ? (
-                  <circle cx={x + 11} cy="1391" r="6" fill={swatch.fill} stroke={swatch.stroke} strokeWidth="1.5" />
+                  <circle cx={x + 11} cy="1397" r="6" fill={swatch.fill} stroke={swatch.stroke} strokeWidth="1.5" />
                 ) : (
-                  <path d={`M${x} 1391h22`} fill="none" stroke={swatch.stroke} strokeWidth="3" strokeLinecap="round" />
+                  <path d={`M${x} 1397h22`} fill="none" stroke={swatch.stroke} strokeWidth="3" strokeLinecap="round" />
                 )}
-                <text x={x + 30} y="1396" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink}>
+                <text x={x + 30} y="1402" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink}>
                   {item.label}
                 </text>
               </g>
@@ -201,13 +224,13 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
           })}
         </g>
       ) : null}
-      <text x="60" y="1438" className="poster-mono" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
+      <text x="60" y="1444" className="poster-mono" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
         MAP DATA © OPENSTREETMAP CONTRIBUTORS · ODbL 1.0
       </text>
-      <text x="1140" y="1438" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
+      <text x="1140" y="1444" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#5f6368' : palette.ink}>
         {features.length.toLocaleString()} {state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES
       </text>
-      <text x="60" y="1474" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink} opacity="0.7">
+      <text x="60" y="1478" className="poster-mono" fontSize="13" fill={sourceMode ? '#5f6368' : palette.ink} opacity="0.7">
         MAPTRUTH / {state.data.lock?.sourceRevision?.toUpperCase() ?? 'NO LOCK'} / {state.data.lock?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}
       </text>
     </svg>
