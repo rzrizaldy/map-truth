@@ -62,3 +62,19 @@ describe('matching a place the geocoder named in another language', () => {
     expect(promptMatchesPlace(mentions, 'Kyoto', 'Kyoto, Japan', 'Kyoto')).toBe(true)
   })
 })
+
+describe('disambiguating short acronyms', () => {
+  it('qualifies an acronym with the place named after it', () => {
+    const mentions = extractPlaceMentions('Peta demo DPR Jakarta')
+    expect(mentions.map((m) => [m.text, m.query])).toEqual([['DPR', 'DPR Jakarta'], ['Jakarta', 'Jakarta']])
+  })
+
+  it('leaves full place names alone', () => {
+    expect(extractPlaceMentions('A poster of Kyoto and Osaka').map((m) => m.query))
+      .toEqual(['Kyoto', 'Osaka'])
+  })
+
+  it('does not qualify an acronym that is already last', () => {
+    expect(extractPlaceMentions('Jakarta DPR').map((m) => m.query)).toEqual(['Jakarta', 'DPR'])
+  })
+})

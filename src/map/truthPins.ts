@@ -1,4 +1,4 @@
-import { extractPlaceMentions } from './places'
+import { extractPlaceMentions, type PlaceMention } from './places'
 import type { GeocodedPlace } from './placeTypes'
 
 export type TruthPin = {
@@ -18,12 +18,13 @@ const insideBbox = ([longitude, latitude]: [number, number], [west, south, east,
  * otherwise pin every road named after the city instead of the thing the brief
  * is actually about.
  */
-export const pinnableTerms = (prompt: string, placeNames: Array<string | undefined>): string[] => {
+export const pinnableTerms = (prompt: string, placeNames: Array<string | undefined>): PlaceMention[] => {
   const known = placeNames.filter(Boolean).map((name) => name!.toLowerCase())
   return extractPlaceMentions(prompt, 6)
-    .map((mention) => mention.query)
-    .filter((term) => {
-      const lower = term.toLowerCase()
+    // Compare the raw token, not the lookup query: a qualified query like
+    // "DPR Jakarta" contains the place name without being the place.
+    .filter((mention) => {
+      const lower = mention.text.toLowerCase()
       return !known.some((name) => name.includes(lower) || lower.includes(name))
     })
     .slice(0, 3)
@@ -38,13 +39,13 @@ export const resolveTruthPins = async (
   bbox: [number, number, number, number],
   lookup: Lookup,
 ): Promise<TruthPin[]> => {
-  const terms = pinnableTerms(prompt, placeNames)
-  if (!terms.length) return []
+  const mentions = pinnableTerms(prompt, placeNames)
+  if (!mentions.length) return []
 
-  const found = await Promise.all(terms.map(async (term) => {
-    const place = await lookup(term, bbox)
+  const found = await Promise.all(mentions.map(async (mention) => {
+    const place = await lookup(mention.query, bbox)
     if (!place || !insideBbox(place.center, bbox)) return null
-    return { term, name: place.name, label: place.label, center: place.center }
+    return { term: mention.text, name: place.name, label: place.label, center: place.center }
   }))
   return found.filter((pin): pin is TruthPin => pin !== null)
 }

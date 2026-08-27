@@ -5,7 +5,8 @@ const bbox: [number, number, number, number] = [106.78, -6.23, 106.82, -6.19]
 
 describe('choosing what to pin', () => {
   it('drops the place the map is already on', () => {
-    expect(pinnableTerms('Peta demo DPR Jakarta', ['Jakarta', 'Jakarta, Indonesia'])).toEqual(['DPR'])
+    expect(pinnableTerms('Peta demo DPR Jakarta', ['Jakarta', 'Jakarta, Indonesia'])
+      .map((mention) => [mention.text, mention.query])).toEqual([['DPR', 'DPR Jakarta']])
   })
 
   it('returns nothing when the prompt names only the current place', () => {
@@ -22,7 +23,8 @@ describe('resolving pins against OpenStreetMap', () => {
     const lookup = vi.fn().mockResolvedValue(place('Gedung DPR/MPR RI', [106.8005, -6.2107]))
     const pins = await resolveTruthPins('Peta demo DPR Jakarta', ['Jakarta'], bbox, lookup)
     expect(pins).toEqual([{ term: 'DPR', name: 'Gedung DPR/MPR RI', label: 'Gedung DPR/MPR RI, Jakarta', center: [106.8005, -6.2107] }])
-    expect(lookup).toHaveBeenCalledWith('DPR', bbox)
+    // The qualifier travels with the lookup so it cannot land in another city.
+    expect(lookup).toHaveBeenCalledWith('DPR Jakarta', bbox)
   })
 
   it('discards a hit that falls outside the locked viewport', async () => {

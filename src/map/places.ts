@@ -112,8 +112,20 @@ export const extractPlaceMentions = (prompt: string, limit = 4): PlaceMention[] 
     if (acronym(bare) && !STOPWORDS.has(lower)) push(bare, bare, strong)
   }
 
+  // An acronym on its own is ambiguous — "DPR" is a building in Jakarta and a
+  // park in Bandung. When the prompt also names somewhere later, carry that
+  // along as a qualifier so the lookup lands on the one the writer meant.
+  const qualifier = found.at(-1)
+  const qualified = found.map((mention, position) => {
+    const isAcronym = mention.text.length <= 4 && mention.text === mention.text.toUpperCase()
+    // An acronym we already expand (NYC, LA) is unambiguous on its own.
+    const alreadyKnown = mention.query.toLowerCase() !== mention.text.toLowerCase()
+    const needsContext = isAcronym && !alreadyKnown && qualifier && position < found.length - 1
+    return needsContext ? { ...mention, query: `${mention.query} ${qualifier.query}` } : mention
+  })
+
   // A place the sentence points at outranks one merely mentioned.
-  return [...found].sort((a, b) => Number(b.strong) - Number(a.strong)).slice(0, limit)
+  return qualified.sort((a, b) => Number(b.strong) - Number(a.strong)).slice(0, limit)
 }
 
 /**

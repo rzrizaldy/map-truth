@@ -102,9 +102,10 @@ test('the prompt pins a real building at its true coordinates', async ({ page })
   await page.route('**/api/geocode', async (route) => {
     const body = route.request().postDataJSON() as { center?: unknown; query?: string; within?: unknown }
     if (body.center) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ place: jakarta }) })
-    const match = body.query === 'DPR' ? dpr : jakarta
+    const asksForDpr = (body.query ?? '').includes('DPR')
+    const match = asksForDpr ? dpr : jakarta
     // A bounded lookup is what keeps "DPR" from resolving to another city.
-    if (body.query === 'DPR') expect(body.within).toBeTruthy()
+    if (asksForDpr) expect(body.within).toBeTruthy()
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ query: body.query, places: [match] }) })
   })
 
