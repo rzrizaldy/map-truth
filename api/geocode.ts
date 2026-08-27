@@ -62,7 +62,9 @@ export const toGeocodedPlace = (place: NominatimPlace): GeocodedPlace | null => 
 }
 
 const nominatim = async (path: string) => {
-  const response = await fetch(`https://nominatim.openstreetmap.org${path}`, {
+  // Without this Nominatim answers in the local language — Kyoto comes back as
+  // 京都市, which an English interface cannot match against the prompt.
+  const response = await fetch(`https://nominatim.openstreetmap.org${path}&accept-language=en`, {
     headers: { 'User-Agent': CONTACT, Referer: 'https://map-truth.vercel.app', Accept: 'application/json' },
     signal: AbortSignal.timeout(12_000),
   })

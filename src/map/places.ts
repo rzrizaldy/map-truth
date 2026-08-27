@@ -90,10 +90,17 @@ export const extractPlaceMentions = (prompt: string, limit = 4): PlaceMention[] 
   return found
 }
 
-/** True when the locked place plainly does not match any place the prompt names. */
-export const promptMatchesPlace = (mentions: PlaceMention[], placeLabel?: string) => {
-  if (!mentions.length || !placeLabel) return true
-  const haystack = placeLabel.toLowerCase()
+/**
+ * True when the locked place plainly matches something the prompt names.
+ *
+ * Checks every name we hold for the place, not just one: a geocoder may answer
+ * in the local language, so "Kyoto" must still match a place whose official
+ * label came back as 京都市 but which the user reached by asking for Kyoto.
+ */
+export const promptMatchesPlace = (mentions: PlaceMention[], ...placeNames: Array<string | undefined>) => {
+  if (!mentions.length) return true
+  const haystacks = placeNames.filter((name): name is string => Boolean(name)).map((name) => name.toLowerCase())
+  if (!haystacks.length) return true
   return mentions.some(({ text, query }) =>
-    haystack.includes(text.toLowerCase()) || haystack.includes(query.toLowerCase()))
+    haystacks.some((haystack) => haystack.includes(text.toLowerCase()) || haystack.includes(query.toLowerCase())))
 }

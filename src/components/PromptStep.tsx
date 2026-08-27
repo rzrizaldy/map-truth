@@ -15,7 +15,7 @@ export function PromptStep() {
 
   const mentions = useMemo(() => extractPlaceMentions(prompt), [prompt])
   const anyRunning = Object.values(routes).some((route) => route.status === 'generating' || route.status === 'queued')
-  const matches = promptMatchesPlace(mentions, place.label ?? place.name)
+  const matches = promptMatchesPlace(mentions, place.name, place.label, place.query)
 
   const goTo = async (query: string) => {
     setFocusing(query)

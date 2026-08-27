@@ -92,6 +92,8 @@ export type MapTruthState = {
     source: PlaceSource
     /** Full geocoder label for the locked viewport, when one resolved. */
     label?: string
+    /** What the caller actually asked for, when the place was reached by name. */
+    query?: string
     resolving?: boolean
   }
   map: {

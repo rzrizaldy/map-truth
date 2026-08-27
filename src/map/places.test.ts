@@ -30,3 +30,20 @@ describe('prompt place extraction', () => {
     expect(promptMatchesPlace([], 'Anywhere')).toBe(true)
   })
 })
+
+describe('matching a place the geocoder named in another language', () => {
+  it('accepts the name the user asked for even when the label is local', () => {
+    const mentions = extractPlaceMentions('A 1970s Swiss travel poster of Kyoto in autumn')
+    expect(promptMatchesPlace(mentions, '京都市', '京都市, 京都府, 日本', 'Kyoto')).toBe(true)
+  })
+
+  it('still catches a genuine mismatch', () => {
+    const mentions = extractPlaceMentions('A poster of Kyoto in autumn')
+    expect(promptMatchesPlace(mentions, 'Manhattan', 'Manhattan, New York', undefined)).toBe(false)
+  })
+
+  it('matches when any one of several mentioned places is the locked one', () => {
+    const mentions = extractPlaceMentions('Swiss style poster of Kyoto')
+    expect(promptMatchesPlace(mentions, 'Kyoto', 'Kyoto, Japan', 'Kyoto')).toBe(true)
+  })
+})
