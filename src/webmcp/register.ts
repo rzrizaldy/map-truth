@@ -1,19 +1,23 @@
 import { appStore } from '../state/store'
 import {
   exportGroundedArtwork,
-  getDrawnGeometry,
+  generateComparison,
   getMapContext,
-  lockMapBoundary,
-  renderGroundedPoster,
+  inspectComparison,
+  lockLiveOsm,
+  navigateMap,
   verifyGeography,
+  verifyOsmLock,
 } from './commands'
 import {
   EXPORT_ARTWORK_SCHEMA,
-  GET_DRAWN_GEOMETRY_SCHEMA,
-  GET_MAP_CONTEXT_SCHEMA,
-  LOCK_MAP_BOUNDARY_SCHEMA,
-  RENDER_POSTER_SCHEMA,
+  GENERATE_COMPARISON_SCHEMA,
+  INSPECT_COMPARISON_SCHEMA,
+  INSPECT_MAP_CONTEXT_SCHEMA,
+  LOCK_LIVE_OSM_SCHEMA,
+  NAVIGATE_MAP_SCHEMA,
   VERIFY_GEOGRAPHY_SCHEMA,
+  VERIFY_OSM_LOCK_SCHEMA,
 } from './schemas'
 
 export const registerMapTruthTools = async (): Promise<() => void> => {
@@ -23,7 +27,7 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         ...state.ui,
         webmcpAvailable: false,
         webmcpStatus: 'unavailable',
-        webmcpMessage: 'WebMCP is unavailable here. Manual controls remain fully functional.',
+        webmcpMessage: 'Manual mode is active. Enable Chrome WebMCP testing or use an origin-trial build for agent mode.',
       },
     }))
     return () => undefined
@@ -32,93 +36,71 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
   const controller = new AbortController()
   try {
     await Promise.all([
-      document.modelContext.registerTool(
-        {
-          name: 'lock_map_boundary',
-          title: 'Lock map boundary',
-          description: 'Lock geography to the current map viewport and fetch OpenStreetMap vectors for that area. Never accepts coordinates from the agent.',
-          inputSchema: LOCK_MAP_BOUNDARY_SCHEMA,
-          annotations: { readOnlyHint: false, untrustedContentHint: false },
-          execute: () => lockMapBoundary(),
-        },
-        { signal: controller.signal },
-      ),
-      document.modelContext.registerTool(
-        {
-          name: 'get_map_context',
-          title: 'Inspect map context',
-          description: 'Return the current map bounds, selection state, and a compact catalog of visible source-backed features.',
-          inputSchema: GET_MAP_CONTEXT_SCHEMA,
-          annotations: { readOnlyHint: true, untrustedContentHint: true },
-          execute: (input) => getMapContext(input as { detail?: 'summary' | 'features' }),
-        },
-        { signal: controller.signal },
-      ),
-      document.modelContext.registerTool(
-        {
-          name: 'get_drawn_geometry',
-          title: 'Read drawn geometry',
-          description: 'Return the human-drawn route or selected polygon without altering it.',
-          inputSchema: GET_DRAWN_GEOMETRY_SCHEMA,
-          annotations: { readOnlyHint: true, untrustedContentHint: true },
-          execute: () => getDrawnGeometry(),
-        },
-        { signal: controller.signal },
-      ),
-      document.modelContext.registerTool(
-        {
-          name: 'render_grounded_poster',
-          title: 'Render grounded poster',
-          description: 'Apply art direction using only validated feature IDs and human-drawn geometry. Never accepts coordinates or arbitrary markup.',
-          inputSchema: RENDER_POSTER_SCHEMA,
-          annotations: { readOnlyHint: false, untrustedContentHint: false },
-          execute: (input) => renderGroundedPoster(input),
-        },
-        { signal: controller.signal },
-      ),
-      document.modelContext.registerTool(
-        {
-          name: 'verify_geography',
-          title: 'Verify geography',
-          description: 'Activate source comparison and report provenance for every rendered geographic layer.',
-          inputSchema: VERIFY_GEOGRAPHY_SCHEMA,
-          annotations: { readOnlyHint: false, untrustedContentHint: false },
-          execute: () => verifyGeography(),
-        },
-        { signal: controller.signal },
-      ),
-      document.modelContext.registerTool(
-        {
-          name: 'export_artwork',
-          title: 'Export artwork',
-          description: 'Prepare PNG or SVG artwork from the verified source-backed render, including OpenStreetMap attribution.',
-          inputSchema: EXPORT_ARTWORK_SCHEMA,
-          annotations: { readOnlyHint: false, untrustedContentHint: false },
-          execute: (input) => exportGroundedArtwork(input as { format?: unknown }),
-        },
-        { signal: controller.signal },
-      ),
+      document.modelContext.registerTool({
+        name: 'inspect_map_context', title: 'Inspect live map context',
+        description: 'Read the current viewport, live OSM lock, verification state, and up to 20 visible feature references.',
+        inputSchema: INSPECT_MAP_CONTEXT_SCHEMA,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: (input) => getMapContext(input as { detail?: 'summary' | 'features' }),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'navigate_map', title: 'Navigate the map',
+        description: 'Move the camera to validated longitude, latitude, and zoom. Camera coordinates never become artwork geometry.',
+        inputSchema: NAVIGATE_MAP_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: (input) => navigateMap(input as { center?: unknown; zoom?: unknown; label?: unknown }),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'lock_live_osm', title: 'Lock live OSM viewport',
+        description: 'Create an immediate, traceable geometry lock from the OSM vector tiles already loaded in the visible viewport.',
+        inputSchema: LOCK_LIVE_OSM_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        execute: () => lockLiveOsm('webmcp'),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'verify_osm_lock', title: 'Verify with canonical OSM',
+        description: 'Upgrade the active live-tile lock through Overpass. A failed verification preserves the current live lock.',
+        inputSchema: VERIFY_OSM_LOCK_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        execute: () => verifyOsmLock(),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'generate_comparison', title: 'Stage GPT Image comparison',
+        description: 'Stage one or more gpt-image-2 routes. The page requires visible user approval before any costed request begins.',
+        inputSchema: GENERATE_COMPARISON_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        execute: (input) => generateComparison(input as { routes?: unknown; prompt?: unknown }),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'inspect_comparison', title: 'Inspect image comparison',
+        description: 'Read compact per-route progress, errors, duration, and prompt lineage for the current comparison.',
+        inputSchema: INSPECT_COMPARISON_SCHEMA,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: () => inspectComparison(),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'verify_geography', title: 'Verify rendered geography',
+        description: 'Recompute feature hashes, activate the truth seam, and report mismatches without changing coordinates.',
+        inputSchema: VERIFY_GEOGRAPHY_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: () => verifyGeography(),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
+        name: 'export_artwork', title: 'Export attributed artwork',
+        description: 'Prepare an SVG or 2400 by 3000 PNG with provenance metadata and OpenStreetMap attribution.',
+        inputSchema: EXPORT_ARTWORK_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: (input) => exportGroundedArtwork(input as { format?: unknown }),
+      }, { signal: controller.signal }),
     ])
     appStore.setState((state) => ({
-      ui: {
-        ...state.ui,
-        webmcpAvailable: true,
-        webmcpStatus: 'available',
-        webmcpMessage: 'Six MapTruth tools are registered on this page.',
-      },
+      ui: { ...state.ui, webmcpAvailable: true, webmcpStatus: 'available', webmcpMessage: 'Agent mode active · 8 visible MapTruth tools registered.' },
     }))
   } catch (error) {
     controller.abort()
     appStore.setState((state) => ({
-      ui: {
-        ...state.ui,
-        webmcpAvailable: false,
-        webmcpStatus: 'error',
-        webmcpMessage: `WebMCP registration failed: ${String(error)}`,
-      },
+      ui: { ...state.ui, webmcpAvailable: false, webmcpStatus: 'error', webmcpMessage: `WebMCP registration failed: ${String(error)}` },
     }))
   }
-
   return () => controller.abort()
 }
-

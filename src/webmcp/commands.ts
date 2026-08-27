@@ -1,10 +1,12 @@
 import type { LineString, Polygon, Position } from 'geojson'
-import { bboxSpanOk } from '../map/boundary'
-import { fetchOsmExtract } from '../map/fetchExtract'
+import { verifyOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
+import { getMapRuntime } from '../map/runtime'
 import { hashGeometry } from '../lib/hash'
 import { exportArtwork } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
+import { captureUndo } from '../state/history'
+import { inspectComparison, stageComparisonForApproval } from '../ai/generation'
 import type {
   LabelDensity,
   PosterPalette,
@@ -57,7 +59,7 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
         type: properties.type,
       }))
     : undefined
-  addActivity('get_map_context', 'ok', `${contextFeatures.length} source-backed features in context`)
+  addActivity('inspect_map_context', 'ok', `${contextFeatures.length} source-backed features in context`, { source: 'webmcp' })
   return {
     status: 'ok',
     place: state.place.name,
@@ -66,6 +68,13 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
     hasSelection: Boolean(state.selection),
     hasDrawnRoute: state.selection?.kind === 'route',
     featureCount: contextFeatures.length,
+    lock: state.data.lock ? {
+      id: state.data.lock.id,
+      kind: state.data.lock.kind,
+      geometryHash: state.data.lock.geometryHash,
+      sourceRevision: state.data.lock.sourceRevision,
+    } : null,
+    verificationStatus: state.data.verificationStatus,
     features,
     truncated: input.detail === 'features' && named.length > 20,
   }
@@ -78,7 +87,7 @@ export const getDrawnGeometry = (): ToolResult => {
     return {
       status: 'needs_user_action',
       reason: 'no_drawn_geometry',
-      suggestedAction: 'lock_map_boundary',
+      suggestedAction: 'lock_live_osm',
     }
   }
   addActivity('get_drawn_geometry', 'ok', `Returned human-drawn ${selection.kind}`)
@@ -130,19 +139,19 @@ const isToolError = (value: RenderPosterInput | ToolResult): value is ToolResult
 export const renderGroundedPoster = (input: unknown): ToolResult => {
   const state = appStore.getState()
   if (!state.selection) {
-    addActivity('render_grounded_poster', 'needs_user_action', 'Lock a map boundary first')
+    addActivity('render_grounded_poster', 'needs_user_action', 'Create a live OSM lock first')
     return {
       status: 'needs_user_action',
       reason: 'no_area_selected',
-      suggestedAction: 'lock_map_boundary',
+      suggestedAction: 'lock_live_osm',
     }
   }
   if (state.data.status !== 'ready' || !state.data.features.length) {
-    addActivity('render_grounded_poster', 'needs_user_action', 'OpenStreetMap extract not loaded')
+    addActivity('render_grounded_poster', 'needs_user_action', 'Live OpenStreetMap features are not locked')
     return {
       status: 'needs_user_action',
       reason: 'no_area_selected',
-      suggestedAction: 'lock_map_boundary',
+      suggestedAction: 'lock_live_osm',
     }
   }
   const validated = validatePosterInput(input)
@@ -170,6 +179,7 @@ export const renderGroundedPoster = (input: unknown): ToolResult => {
   }
 
   const renderedFeatureIds = contextFeatures.map((feature) => feature.properties.id)
+  captureUndo('poster art direction')
   appStore.setState((current) => ({
     poster: {
       ...current.poster,
@@ -185,7 +195,7 @@ export const renderGroundedPoster = (input: unknown): ToolResult => {
     renderedFeatureCount: renderedFeatureIds.length,
     emphasizedFeatureIds: validated.emphasizedFeatureIds,
     preset: validated.preset,
-    geographySource: 'osm_and_human_geometry',
+    geographySource: state.data.lock?.kind === 'verified' ? 'openstreetmap_verified_and_human_geometry' : 'live_osm_tiles_and_human_geometry',
   }
 }
 
@@ -211,6 +221,7 @@ export const verifyGeography = async (): Promise<ToolResult> => {
   )
   const geometryHashMismatches = recomputed.filter((result) => !result.matches).map((result) => result.id)
   const mismatches = [...unknownFeatureIds, ...geometryHashMismatches]
+  captureUndo('geography comparison mode')
   appStore.setState((current) => ({
     ui: { ...current.ui, comparisonMode: 'overlay', seam: 50 },
   }))
@@ -224,6 +235,8 @@ export const verifyGeography = async (): Promise<ToolResult> => {
     unknownFeatureIds,
     geometryHashMismatches,
     comparisonMode: 'overlay',
+    lockType: state.data.lock?.kind ?? 'none',
+    lockGeometryHash: state.data.lock?.geometryHash,
   } as ToolResult
 }
 
@@ -241,30 +254,57 @@ export const exportGroundedArtwork = async (input: { format?: unknown }): Promis
   }
 }
 
-export const lockMapBoundary = async (): Promise<ToolResult> => {
-  const { map } = appStore.getState()
-  if (!bboxSpanOk(map.bbox)) {
-    addActivity('lock_map_boundary', 'needs_user_action', 'Viewport is too large — zoom in')
-    return {
-      status: 'needs_user_action',
-      reason: 'bbox_too_large',
-      suggestedAction: 'zoom_in',
-    }
-  }
+export const lockLiveOsm = async (source: 'manual' | 'webmcp' = 'manual'): Promise<ToolResult> => {
+  const runtime = getMapRuntime()
+  if (!runtime) return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+  return runtime.lockLiveOsm(source)
+}
 
-  const result = await fetchOsmExtract(map.bbox)
+export const verifyOsmLock = async (): Promise<ToolResult> => {
+  const state = appStore.getState()
+  if (!state.data.lock) return { status: 'needs_user_action', reason: 'live_osm_lock_required', suggestedAction: 'lock_live_osm' }
+  const result = await verifyOsmExtract(state.data.lock.bbox)
   if (!result.ok) {
     return {
       status: 'needs_user_action',
       reason: result.reason,
-      suggestedAction: result.suggestedAction ?? 'zoom_in',
+      suggestedAction: result.suggestedAction ?? 'retry_verification',
     }
   }
-
   return {
-    status: 'ok',
+    status: 'verified',
     featureCount: result.featureCount,
     place: result.place,
-    geographySource: 'openstreetmap_overpass',
+    geometryHash: result.geometryHash,
+    durationMs: result.durationMs,
+    geographySource: 'openstreetmap_overpass_verified',
   }
 }
+
+export const navigateMap = async (input: { center?: unknown; zoom?: unknown; label?: unknown }): Promise<ToolResult> => {
+  if (!Array.isArray(input.center) || input.center.length !== 2 || input.center.some((value) => typeof value !== 'number' || !Number.isFinite(value))) {
+    return { status: 'error', reason: 'invalid_center' }
+  }
+  const [longitude, latitude] = input.center as [number, number]
+  const zoom = Number(input.zoom)
+  if (longitude < -180 || longitude > 180 || latitude < -85 || latitude > 85 || !Number.isFinite(zoom) || zoom < 2 || zoom > 18) {
+    return { status: 'error', reason: 'invalid_camera' }
+  }
+  const runtime = getMapRuntime()
+  if (!runtime) return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+  const before = appStore.getState().map
+  captureUndo('map navigation')
+  await runtime.navigate([longitude, latitude], zoom)
+  const label = typeof input.label === 'string' ? cleanText(input.label, 60) : 'Agent-selected viewport'
+  appStore.setState((state) => ({ place: { name: label || state.place.name, source: 'none' }, ui: { ...state.ui, canUndo: true } }))
+  addActivity('navigate_map', 'ok', `Map moved to ${label}`, {
+    source: 'webmcp', beforeHash: `${before.center.join(',')}/${before.zoom}`, afterHash: `${longitude},${latitude}/${zoom}`, reversible: true,
+  })
+  return { status: 'ok', center: [longitude, latitude], zoom, artworkGeometryChanged: false }
+}
+
+export const generateComparison = (input: { routes?: unknown; prompt?: unknown }): ToolResult => stageComparisonForApproval(input)
+export { inspectComparison }
+
+// Compatibility alias for older manual and agent clients.
+export const lockMapBoundary = lockLiveOsm

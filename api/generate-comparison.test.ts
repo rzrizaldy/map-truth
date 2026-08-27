@@ -43,7 +43,8 @@ describe('GPT Image comparison endpoint validation', () => {
       expect(options.model).toBe('openai/gpt-image-2')
       expect(options.size).toBe('1024x1536')
     }
-    const artLayerPrompt = vi.mocked(generateImage).mock.calls[2][0].prompt
-    expect(String(artLayerPrompt)).toContain('Do not draw roads, rivers, routes, boundaries, maps, labels')
+    const artLayerPrompt = vi.mocked(generateImage).mock.calls[2][0].prompt as { text: string; images: string[] }
+    expect(artLayerPrompt.text).toContain('Do not draw roads, rivers, routes, boundaries, maps, labels')
+    expect(artLayerPrompt.images).toEqual(['data:image/png;base64,aA=='])
   })
 })

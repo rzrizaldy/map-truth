@@ -8,13 +8,11 @@
     "dev:vercel": "vercel dev",
     "build": "npm run maplibre:copy && tsc -b && vite build",
     "typecheck": "tsc -b",
-    "lint": "oxlint",
+    "lint": "oxlint src api tests vite.config.ts vitest.config.ts playwright.config.ts vercel.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "data:prepare": "bash scripts/prepare-osm.sh",
-    "data:normalize": "node scripts/normalize-osm.mjs",
     "maplibre:copy": "mkdir -p public/maplibre && cp node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs public/maplibre/"
   },
   "dependencies": {

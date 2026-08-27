@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from 'geojson'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
+export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
 export type PosterPreset = 'editorial' | 'retro' | 'blueprint'
 export type PosterPalette = 'red-cream-black' | 'blue-white' | 'sunset'
 export type LabelDensity = 'minimal' | 'balanced' | 'detailed'
@@ -10,8 +11,13 @@ export type SourceFeatureProperties = {
   name?: string
   type: FeatureClass
   roadClass?: string
-  osmType: 'node' | 'way' | 'relation'
-  osmId: number
+  sourceKind: FeatureSourceKind
+  osmType?: 'node' | 'way' | 'relation'
+  osmId?: number
+  sourceId?: string
+  sourceLayer?: string
+  tileFeatureId?: string
+  sourceRevision?: string
   geometryHash: string
 }
 
@@ -40,23 +46,47 @@ export type ActivityEntry = {
   tool: string
   status: 'ok' | 'error' | 'needs_user_action'
   summary: string
+  durationMs?: number
+  affectedFeatureIds?: string[]
+  beforeHash?: string
+  afterHash?: string
+  source?: 'manual' | 'webmcp' | 'system'
+  reversible?: boolean
 }
 
-export type GeneratedComparison = {
-  promptOnly: string
-  screenshotGrounded: string
-  mapTruthArtLayer: string
-  model: 'openai/gpt-image-2'
+export type ComparisonRoute = 'promptOnly' | 'screenshotGrounded' | 'mapTruthGrounded'
+export type GenerationStatus = 'idle' | 'awaiting_approval' | 'queued' | 'generating' | 'ready' | 'error' | 'cancelled'
+
+export type GenerationRouteState = {
+  status: GenerationStatus
+  imageDataUrl?: string
+  error?: string
+  startedAt?: number
+  durationMs?: number
+}
+
+export type GeographyLock = {
+  id: string
+  kind: 'live' | 'verified'
+  bbox: [number, number, number, number]
+  zoom: number
+  sourceRevision: string
+  geometryHash: string
+  createdAt: string
+  featureCount: number
 }
 
 export type ComparisonMode = 'poster' | 'source' | 'split' | 'overlay'
 
-export type PlaceSource = 'none' | 'bundled' | 'overpass'
+export type PlaceSource = 'none' | 'live' | 'overpass'
 
 export type MapTruthState = {
   data: {
     status: 'idle' | 'loading' | 'ready' | 'error'
     features: SourceFeature[]
+    lock?: GeographyLock
+    verificationStatus: 'idle' | 'verifying' | 'verified' | 'error'
+    verificationError?: string
     error?: string
   }
   place: {
@@ -81,12 +111,14 @@ export type MapTruthState = {
     webmcpAvailable: boolean
     webmcpStatus: 'checking' | 'available' | 'unavailable' | 'error'
     webmcpMessage?: string
+    mapReady: boolean
+    selectedReceiptId?: string
+    canUndo: boolean
   }
   ai: {
-    status: 'idle' | 'generating' | 'ready' | 'error'
     prompt: string
-    result?: GeneratedComparison
-    error?: string
+    routes: Record<ComparisonRoute, GenerationRouteState>
+    pendingRoutes?: ComparisonRoute[]
   }
   activity: ActivityEntry[]
 }
@@ -97,6 +129,5 @@ export type ToolResult =
   | { status: 'ok'; [key: string]: unknown }
   | { status: 'ready'; [key: string]: unknown }
   | { status: 'verified'; [key: string]: unknown }
-  | { status: 'needs_user_action'; reason: string; suggestedAction: string }
+  | { status: 'needs_user_action'; reason: string; suggestedAction: string; [key: string]: unknown }
   | { status: 'error'; reason: string; details?: unknown }
-

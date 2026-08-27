@@ -7,13 +7,13 @@ import type { SourceFeature } from '../types/maptruth'
 const source: SourceFeature = {
   type: 'Feature',
   geometry: { type: 'LineString', coordinates: [[106.8, -6.20], [106.82, -6.19]] },
-  properties: { id: 'osm:a99', name: '<script>alert(1)</script>', type: 'road', osmType: 'way', osmId: 99, geometryHash: 'source-hash-99' },
+  properties: { id: 'osm:a99', name: '<script>alert(1)</script>', type: 'road', sourceKind: 'openstreetmap', osmType: 'way', osmId: 99, geometryHash: 'source-hash-99' },
 }
 
 beforeEach(() => {
   appStore.setState({
-    place: { name: 'Test place', source: 'bundled' },
-    data: { status: 'ready', features: [source] },
+    place: { name: 'Test place', source: 'overpass' },
+    data: { status: 'ready', features: [source], verificationStatus: 'verified' },
     map: { center: [106.81, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: undefined,
     poster: { spec: { ...DEFAULT_POSTER_SPEC, title: '<img src=x onerror=alert(1)>', emphasizedFeatureIds: [] }, status: 'ready', renderedFeatureIds: ['osm:a99'], warnings: [] },
@@ -44,4 +44,3 @@ describe('poster SVG provenance', () => {
     expect(hidden.container.querySelector('[data-legend="osm-layers"]')).toBeNull()
   })
 })
-

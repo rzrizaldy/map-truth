@@ -1,128 +1,206 @@
 import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import type { Map as MapLibreMap } from 'maplibre-gl'
+import type { Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
 import { MaplibreTerradrawControl } from '@watergis/maplibre-gl-terradraw'
 import type { Feature, LineString, Polygon } from 'geojson'
+import { bboxToPolygon, formatPlaceLabel, liveBboxSpanOk } from './boundary'
+import { demoRoute, featuresInContext } from './context'
+import { JAKARTA_CENTER, JAKARTA_ZOOM, OPENFREEMAP_STYLE } from './constants'
+import { createLiveLock, liveLockCacheKey, normalizeViewportFeatures, type ViewportCandidate } from './liveOsm'
+import { readCachedLock, writeCachedLock } from './lockCache'
+import { registerMapRuntime } from './runtime'
 import { hashGeometrySync } from '../lib/hash'
-import { appStore, addActivity, useAppStore } from '../state/store'
-import { demoRoute } from './context'
-import {
-  JAKARTA_MAX_BOUNDS,
-  NYC_CENTER,
-  NYC_ZOOM,
-  OPENFREEMAP_STYLE,
-} from './constants'
+import { addActivity, appStore, useAppStore } from '../state/store'
+import { captureUndo } from '../state/history'
+import type { SourceFeature, ToolResult } from '../types/maptruth'
 
-type MapStudioProps = {
-  mode: 'about' | 'demo'
-  captureRef: React.MutableRefObject<(() => string) | null>
-}
-
-const blankStyle: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [{ id: 'paper', type: 'background', paint: { 'background-color': '#F2E7CF' } }],
-}
+type MapStudioProps = { mode: 'about' | 'demo' }
 
 const setSelection = (feature: Feature<LineString | Polygon>) => {
+  captureUndo('drawn geometry')
   const geometry = feature.geometry
   const kind = geometry.type === 'LineString' ? 'route' : 'area'
   const id = `human:${kind}`
   appStore.setState((state) => ({
     selection: { kind, id, geometry, geometryHash: hashGeometrySync(geometry) } as typeof state.selection,
-    poster: { ...state.poster, status: 'ready' },
+    poster: { ...state.poster, status: state.data.features.length ? 'ready' : 'empty' },
   }))
-  addActivity('draw', 'ok', kind === 'route' ? 'Route locked with a 350 m context buffer' : 'Area selection locked')
+  addActivity('draw_geometry', 'ok', kind === 'route' ? 'Human route became the active 350 m context' : 'Human polygon became the active context', {
+    source: 'manual', reversible: true,
+  })
 }
 
-const addOsmOverlay = (map: MapLibreMap, collection: GeoJSON.FeatureCollection) => {
-  if (map.getSource('osm')) {
-    ;(map.getSource('osm') as maplibregl.GeoJSONSource).setData(collection)
-    return
+const featureCollection = (features: SourceFeature[]) => ({ type: 'FeatureCollection' as const, features })
+
+const addLockOverlay = (map: MapLibreMap) => {
+  if (map.getSource('maptruth-lock')) return
+  map.addSource('maptruth-lock', { type: 'geojson', data: featureCollection([]) })
+  map.addLayer({
+    id: 'maptruth-lock-areas', type: 'fill', source: 'maptruth-lock',
+    filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
+    paint: { 'fill-color': ['match', ['get', 'type'], 'water', '#6f98a2', 'park', '#a8ad82', '#d43d28'], 'fill-opacity': 0.23, 'fill-outline-color': '#141512' },
+  })
+  map.addLayer({
+    id: 'maptruth-lock-lines', type: 'line', source: 'maptruth-lock',
+    filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
+    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4f8290', 'road', '#d43d28', '#141512'], 'line-width': 2.2, 'line-opacity': 0.78 },
+  })
+  map.addLayer({
+    id: 'maptruth-lock-points', type: 'circle', source: 'maptruth-lock',
+    filter: ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]],
+    paint: { 'circle-radius': 4.5, 'circle-color': '#d43d28', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff9ec' },
+  })
+  map.addLayer({
+    id: 'maptruth-lock-areas-selected', type: 'fill', source: 'maptruth-lock',
+    filter: ['==', ['get', 'id'], '__none__'],
+    paint: { 'fill-color': '#d43d28', 'fill-opacity': 0.48 },
+  })
+  map.addLayer({
+    id: 'maptruth-lock-lines-selected', type: 'line', source: 'maptruth-lock',
+    filter: ['==', ['get', 'id'], '__none__'],
+    paint: { 'line-color': '#fff9ec', 'line-width': 6 },
+  })
+  map.addLayer({
+    id: 'maptruth-lock-points-selected', type: 'circle', source: 'maptruth-lock',
+    filter: ['==', ['get', 'id'], '__none__'],
+    paint: { 'circle-radius': 8, 'circle-color': '#fff9ec', 'circle-stroke-width': 3, 'circle-stroke-color': '#d43d28' },
+  })
+}
+
+const candidatesFromMap = (map: MapLibreMap): ViewportCandidate[] => {
+  const style = map.getStyle()
+  const sourceLayers = new Map<string, Set<string>>()
+  for (const layer of style.layers ?? []) {
+    if (!('source' in layer) || typeof layer.source !== 'string' || !('source-layer' in layer) || typeof layer['source-layer'] !== 'string') continue
+    const layers = sourceLayers.get(layer.source) ?? new Set<string>()
+    layers.add(layer['source-layer'])
+    sourceLayers.set(layer.source, layers)
   }
-  map.addSource('osm', { type: 'geojson', data: collection })
-  map.addLayer({
-    id: 'parks', type: 'fill', source: 'osm', filter: ['==', ['get', 'type'], 'park'],
-    paint: { 'fill-color': '#B4B590', 'fill-opacity': 0.58, 'fill-outline-color': '#77796E' },
-  })
-  map.addLayer({
-    id: 'water', type: 'line', source: 'osm', filter: ['==', ['get', 'type'], 'water'],
-    paint: { 'line-color': '#688D97', 'line-width': 2.5 },
-  })
-  map.addLayer({
-    id: 'roads', type: 'line', source: 'osm', filter: ['==', ['get', 'type'], 'road'],
-    paint: { 'line-color': '#3F413D', 'line-opacity': 0.75, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.5, 16, 3] },
-  })
-  map.addLayer({
-    id: 'landmarks', type: 'circle', source: 'osm', filter: ['==', ['get', 'type'], 'landmark'],
-    paint: { 'circle-radius': 5, 'circle-color': '#D43D28', 'circle-stroke-width': 2, 'circle-stroke-color': '#FFF9EC' },
-  })
+
+  const candidates: ViewportCandidate[] = []
+  for (const [source, layers] of sourceLayers) {
+    for (const sourceLayer of layers) {
+      try {
+        for (const feature of map.querySourceFeatures(source, { sourceLayer })) {
+          candidates.push({
+            source,
+            sourceLayer,
+            id: feature.id,
+            properties: feature.properties as Record<string, unknown>,
+            geometry: feature.geometry,
+          })
+        }
+      } catch {
+        // Some styles expose rendered features but not source-feature queries.
+      }
+    }
+  }
+
+  if (candidates.length) return candidates
+  return map.queryRenderedFeatures().map((feature: MapGeoJSONFeature) => ({
+    source: feature.source,
+    sourceLayer: feature.sourceLayer ?? feature.layer.id,
+    layerId: feature.layer.id,
+    id: feature.id,
+    properties: feature.properties as Record<string, unknown>,
+    geometry: feature.geometry,
+  }))
 }
 
-export function MapStudio({ mode, captureRef }: MapStudioProps) {
+const boundsTuple = (map: MapLibreMap): [number, number, number, number] => {
+  const bounds = map.getBounds()
+  return [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]
+}
+
+export function MapStudio({ mode }: MapStudioProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
-  const dataStatus = useAppStore((state) => state.data.status)
-  const featureCount = useAppStore((state) => state.data.features.length)
-  const selection = useAppStore((state) => state.selection)
   const features = useAppStore((state) => state.data.features)
-  const mapReady = mode === 'demo' || dataStatus === 'ready'
+  const selectedReceipt = useAppStore((state) => state.activity.find((entry) => entry.id === state.ui.selectedReceiptId))
 
   useEffect(() => {
-    if (!containerRef.current || !mapReady) return
-
-    const state = appStore.getState()
-    const map: MapLibreMap = new maplibregl.Map({
+    if (!containerRef.current) return
+    const initial = appStore.getState().map
+    const map = new maplibregl.Map({
       container: containerRef.current,
-      style: mode === 'demo' ? OPENFREEMAP_STYLE : blankStyle,
-      center: mode === 'demo' ? NYC_CENTER : state.map.center,
-      zoom: mode === 'demo' ? NYC_ZOOM : state.map.zoom,
-      minZoom: mode === 'demo' ? 2 : 11.4,
+      style: OPENFREEMAP_STYLE,
+      center: mode === 'about' ? JAKARTA_CENTER : initial.center,
+      zoom: mode === 'about' ? JAKARTA_ZOOM : initial.zoom,
+      minZoom: 2,
       maxZoom: 18,
-      maxBounds: mode === 'demo' ? undefined : JAKARTA_MAX_BOUNDS,
       canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
     })
     mapRef.current = map
     const mapElement = containerRef.current
+    let invalidateOnMoveEnd = false
+
+    const lockLiveOsm = async (source: 'manual' | 'webmcp' = 'manual'): Promise<ToolResult> => {
+      const startedAt = performance.now()
+      const bbox = boundsTuple(map)
+      const zoom = map.getZoom()
+      if (!map.loaded() || !map.isStyleLoaded()) {
+        addActivity('lock_live_osm', 'needs_user_action', 'The vector map is still loading', { source })
+        return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+      }
+      if (!liveBboxSpanOk(bbox)) {
+        addActivity('lock_live_osm', 'needs_user_action', 'Zoom closer before creating a live OSM lock', { source })
+        return { status: 'needs_user_action', reason: 'bbox_too_large', suggestedAction: 'zoom_in' }
+      }
+
+      appStore.setState((state) => ({ data: { ...state.data, status: 'loading', error: undefined } }))
+      const cacheKey = liveLockCacheKey(bbox, zoom)
+      const cached = await readCachedLock(cacheKey)
+      const normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map))
+      if (!normalized.length) {
+        appStore.setState((state) => ({ data: { ...state.data, status: 'error', error: 'No supported OSM features are loaded. Zoom closer or move the map.' } }))
+        addActivity('lock_live_osm', 'error', 'No supported OSM features were available in the loaded tiles', { source, durationMs: Math.round(performance.now() - startedAt) })
+        return { status: 'error', reason: 'no_supported_features' }
+      }
+      const lock = cached?.lock ?? createLiveLock(normalized, bbox, zoom)
+      captureUndo('live OSM lock')
+      const polygon = bboxToPolygon(bbox)
+      const selection = { kind: 'area' as const, id: 'human:viewport', geometry: polygon, geometryHash: hashGeometrySync(polygon) }
+      const seeded = { ...appStore.getState(), data: { ...appStore.getState().data, status: 'ready' as const, features: normalized, lock }, selection }
+      const renderedFeatureIds = featuresInContext(seeded).map((feature) => feature.properties.id)
+      appStore.setState((state) => ({
+        data: { status: 'ready', features: normalized, lock, verificationStatus: 'idle' },
+        place: { name: formatPlaceLabel(bbox), source: 'live' },
+        selection,
+        poster: { ...state.poster, status: 'ready', renderedFeatureIds, warnings: ['Viewport-tile geometry; use Verify with Overpass for canonical OSM IDs.'] },
+        ui: { ...state.ui, canUndo: true },
+      }))
+      void writeCachedLock(cacheKey, { lock, features: normalized })
+      const durationMs = Math.round(performance.now() - startedAt)
+      addActivity('lock_live_osm', 'ok', `${normalized.length.toLocaleString()} live OSM features locked${cached ? ' from viewport cache' : ''}`, {
+        source, durationMs, afterHash: lock.geometryHash, affectedFeatureIds: renderedFeatureIds.slice(0, 80), reversible: true,
+      })
+      return { status: 'ok', lockId: lock.id, lockType: 'live_osm', featureCount: normalized.length, geometryHash: lock.geometryHash, durationMs }
+    }
+
+    const unregisterRuntime = registerMapRuntime({
+      capture: () => map.getCanvas().toDataURL('image/png'),
+      lockLiveOsm,
+      navigate: async (center, zoom) => {
+        invalidateOnMoveEnd = true
+        map.easeTo({ center, zoom, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650 })
+        await new Promise<void>((resolve) => map.once('moveend', () => resolve()))
+      },
+    })
 
     map.on('error', (event) => {
       const message = event.error?.message ?? 'MapLibre render error'
       mapElement.dataset.mapError = message
-      addActivity('map', 'error', message)
+      addActivity('map', 'error', message, { source: 'system' })
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
-
-    const onResize = () => map.resize()
-    window.addEventListener('resize', onResize)
-    requestAnimationFrame(onResize)
+    const resize = () => map.resize()
+    window.addEventListener('resize', resize)
 
     map.on('load', () => {
-      mapElement.dataset.mapLoaded = 'true'
-      onResize()
-
+      addLockOverlay(map)
+      resize()
       if (mode === 'about') {
-        map.addSource('osm', { type: 'geojson', data: '/data/demo-area.geojson' })
-        map.addLayer({
-          id: 'parks', type: 'fill', source: 'osm', filter: ['==', ['get', 'type'], 'park'],
-          paint: { 'fill-color': '#B4B590', 'fill-opacity': 0.58, 'fill-outline-color': '#77796E' },
-        })
-        map.addLayer({
-          id: 'water', type: 'line', source: 'osm', filter: ['==', ['get', 'type'], 'water'],
-          paint: { 'line-color': '#688D97', 'line-width': 2.5 },
-        })
-        map.addLayer({
-          id: 'roads', type: 'line', source: 'osm', filter: ['==', ['get', 'type'], 'road'],
-          paint: { 'line-color': '#3F413D', 'line-opacity': 0.75, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.7, 16, 3] },
-        })
-        map.addLayer({
-          id: 'landmarks', type: 'circle', source: 'osm', filter: ['==', ['get', 'type'], 'landmark'],
-          paint: { 'circle-radius': 5, 'circle-color': '#D43D28', 'circle-stroke-width': 2, 'circle-stroke-color': '#FFF9EC' },
-        })
-        map.addSource('demo-route', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: demoRoute } })
-        map.addLayer({ id: 'demo-route-casing', type: 'line', source: 'demo-route', paint: { 'line-color': '#FFF9EC', 'line-width': 10 } })
-        map.addLayer({ id: 'demo-route-line', type: 'line', source: 'demo-route', paint: { 'line-color': '#D43D28', 'line-width': 5 } })
-
         const draw = new MaplibreTerradrawControl({
           modes: ['linestring', 'polygon', 'select', 'delete-selection', 'delete'],
           open: true,
@@ -136,72 +214,79 @@ export function MapStudio({ mode, captureRef }: MapStudioProps) {
         }
         terra?.on('finish', sync)
         terra?.on('change', sync)
-        if (!appStore.getState().selection) {
-          setSelection({ type: 'Feature', properties: { source: 'maptruth-demo' }, geometry: demoRoute })
-        }
-        const reportFragments = () => {
-          if (mapElement.dataset.featureCount) return
-          const loaded = map.querySourceFeatures('osm').length
-          mapElement.dataset.featureCount = String(loaded)
-          addActivity('map', loaded ? 'ok' : 'error', `${loaded.toLocaleString()} source fragments painted by MapLibre`)
-        }
-        map.once('idle', reportFragments)
-        map.on('sourcedata', (event) => {
-          if (event.sourceId === 'osm' && event.isSourceLoaded) reportFragments()
-        })
-      } else {
-        addActivity('map', 'ok', 'Worldwide OSM vector basemap ready — zoom in and set boundary')
       }
-    })
-
-    map.on('moveend', () => {
-      const bounds = map.getBounds()
-      const center = map.getCenter()
-      appStore.setState({
-        map: {
-          center: [center.lng, center.lat],
-          zoom: map.getZoom(),
-          bbox: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
-        },
+      map.once('idle', async () => {
+        mapElement.dataset.mapLoaded = 'true'
+        appStore.setState((state) => ({ ui: { ...state.ui, mapReady: true } }))
+        addActivity('map_ready', 'ok', 'Live OpenStreetMap vector sources are ready', { source: 'system' })
+        if (mode === 'about') {
+          const result = await lockLiveOsm()
+          if (result.status === 'ok') setSelection({ type: 'Feature', properties: { source: 'maptruth-demo' }, geometry: demoRoute })
+        }
       })
     })
 
-    captureRef.current = () => map.getCanvas().toDataURL('image/png')
+    map.on('movestart', (event) => {
+      // MapLibre also moves while the canvas is resized. Only a real pointer,
+      // keyboard, wheel, or explicit agent navigation invalidates the lock.
+      if ((event as typeof event & { originalEvent?: Event }).originalEvent) invalidateOnMoveEnd = true
+    })
+
+    map.on('moveend', () => {
+      const bbox = boundsTuple(map)
+      const center = map.getCenter()
+      const previous = appStore.getState()
+      const movedAway = invalidateOnMoveEnd && previous.data.lock && previous.data.lock.bbox.some((value, index) => Math.abs(value - bbox[index]) > 0.0005)
+      invalidateOnMoveEnd = false
+      appStore.setState((state) => ({
+        map: { center: [center.lng, center.lat], zoom: map.getZoom(), bbox },
+        ...(movedAway ? {
+          data: { status: 'idle' as const, features: [], verificationStatus: 'idle' as const },
+          selection: undefined,
+          poster: { ...state.poster, status: 'empty' as const, renderedFeatureIds: [], warnings: [] },
+          ai: { ...state.ai, routes: { ...state.ai.routes, mapTruthGrounded: { status: 'idle' as const } } },
+        } : {}),
+      }))
+    })
+
     return () => {
-      window.removeEventListener('resize', onResize)
-      captureRef.current = null
+      window.removeEventListener('resize', resize)
+      unregisterRuntime()
       map.remove()
       mapRef.current = null
+      appStore.setState((state) => ({ ui: { ...state.ui, mapReady: false } }))
     }
-  }, [mode, mapReady, captureRef])
+  }, [mode])
 
   useEffect(() => {
-    if (mode !== 'demo' || !mapRef.current?.isStyleLoaded()) return
-    if (!features.length) return
-    const collection = { type: 'FeatureCollection' as const, features }
-    if (!mapRef.current.getSource('osm')) {
-      addOsmOverlay(mapRef.current, collection)
-    } else {
-      ;(mapRef.current.getSource('osm') as maplibregl.GeoJSONSource).setData(collection)
-    }
-  }, [mode, features])
+    const map = mapRef.current
+    if (!map?.isStyleLoaded() || !map.getSource('maptruth-lock')) return
+    ;(map.getSource('maptruth-lock') as maplibregl.GeoJSONSource).setData(featureCollection(features))
+  }, [features])
 
-  const metaLabel = mode === 'demo'
-    ? (dataStatus === 'ready' && featureCount ? 'OSM EXTRACT LOCKED' : 'WORLDWIDE VECTOR BASEMAP')
-    : 'LOCAL EXTRACT'
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map?.isStyleLoaded()) return
+    const ids = selectedReceipt?.affectedFeatureIds ?? []
+    const filter: maplibregl.FilterSpecification = ids.length ? ['in', ['get', 'id'], ['literal', ids]] : ['==', ['get', 'id'], '__none__']
+    for (const suffix of ['areas', 'lines', 'points']) {
+      const layerId = `maptruth-lock-${suffix}-selected`
+      if (map.getLayer(layerId)) map.setFilter(layerId, filter)
+    }
+  }, [selectedReceipt])
+
+  const data = useAppStore((state) => state.data)
+  const selection = useAppStore((state) => state.selection)
+  const metaLabel = data.lock?.kind === 'verified' ? 'OSM VERIFIED' : data.lock ? 'LIVE OSM LOCK' : 'LIVE VECTOR VIEWPORT'
 
   return (
     <div className={`map-shell ${mode === 'demo' ? 'map-shell--demo' : ''}`}>
       <div className="map-meta">
         <span>{metaLabel}</span>
-        <strong>{featureCount ? `${featureCount.toLocaleString()} features` : 'Pan · zoom · lock'}</strong>
-        <span>{selection?.kind === 'route' ? '350 m route context' : selection ? 'viewport boundary' : 'no boundary yet'}</span>
+        <strong>{data.features.length ? `${data.features.length.toLocaleString()} features` : 'Pan · zoom · lock'}</strong>
+        <span>{selection?.kind === 'route' ? '350 m route context' : data.lock ? data.lock.geometryHash.slice(0, 15) : 'no lock yet'}</span>
       </div>
-      <div
-        ref={containerRef}
-        className="map-canvas"
-        aria-label={mode === 'demo' ? 'Interactive worldwide OpenStreetMap vector map' : 'Interactive source map of Central Jakarta and Senayan'}
-      />
+      <div ref={containerRef} className="map-canvas" aria-label="Interactive worldwide OpenStreetMap vector map" />
       <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
         Map data © OpenStreetMap contributors
       </a>

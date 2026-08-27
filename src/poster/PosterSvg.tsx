@@ -66,7 +66,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
   )
   const emphasized = new Set(spec.emphasizedFeatureIds)
   const mapTransform = 'translate(0 300)'
-  const routePath = state.selection ? geometryToPath(state.selection.geometry, frame) : ''
+  const routePath = state.selection?.kind === 'route' ? geometryToPath(state.selection.geometry, frame) : ''
   const frameCode = `${bounds[0].toFixed(3)} / ${bounds[1].toFixed(3)} — ${bounds[2].toFixed(3)} / ${bounds[3].toFixed(3)}`
 
   return (
@@ -175,7 +175,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
       <rect x="60" y="1368" width="1080" height="1" fill={sourceMode ? '#62645D' : palette.ink} />
       {spec.showLegend ? (
         <g data-legend="osm-layers">
-          {legendLayers(Boolean(state.selection)).map((item, index) => {
+          {legendLayers(state.selection?.kind === 'route').map((item, index) => {
             const x = 60 + index * 210
             const swatch = item.key === 'park'
               ? { fill: sourceMode ? '#DADBD1' : palette.park, stroke: sourceMode ? '#85877F' : palette.ink }
@@ -205,10 +205,10 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
         MAP DATA © OPENSTREETMAP CONTRIBUTORS · ODbL 1.0
       </text>
       <text x="1140" y="1438" className="poster-mono" textAnchor="end" fontSize="15" fill={sourceMode ? '#62645D' : palette.ink}>
-        {features.length.toLocaleString()} VERIFIED FEATURES
+        {features.length.toLocaleString()} {state.data.lock?.kind === 'verified' ? 'OSM VERIFIED' : 'LIVE OSM'} FEATURES
       </text>
       <text x="60" y="1474" className="poster-mono" fontSize="13" fill={sourceMode ? '#62645D' : palette.ink} opacity="0.7">
-        MAPTRUTH / GEOMETRY-LOCKED RENDER / {state.selection?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}
+        MAPTRUTH / {state.data.lock?.sourceRevision?.toUpperCase() ?? 'NO LOCK'} / {state.data.lock?.geometryHash?.slice(0, 18) ?? 'VISIBLE-CONTEXT'}
       </text>
     </svg>
   )

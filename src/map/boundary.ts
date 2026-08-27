@@ -1,10 +1,16 @@
 import type { Polygon } from 'geojson'
 
 export const MAX_BBOX_SPAN_DEGREES = 0.09
+export const MAX_LIVE_BBOX_SPAN_DEGREES = 0.3
 
 export const bboxSpanOk = (bbox: [number, number, number, number]) => {
   const [west, south, east, north] = bbox
   return east - west <= MAX_BBOX_SPAN_DEGREES && north - south <= MAX_BBOX_SPAN_DEGREES
+}
+
+export const liveBboxSpanOk = (bbox: [number, number, number, number]) => {
+  const [west, south, east, north] = bbox
+  return east - west <= MAX_LIVE_BBOX_SPAN_DEGREES && north - south <= MAX_LIVE_BBOX_SPAN_DEGREES
 }
 
 export const bboxToPolygon = (bbox: [number, number, number, number]): Polygon => {

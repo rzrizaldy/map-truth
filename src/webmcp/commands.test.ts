@@ -16,6 +16,7 @@ const feature = (id: string, coordinates: [number, number]): SourceFeature => ({
     id,
     name: id,
     type: 'landmark',
+    sourceKind: 'openstreetmap',
     osmType: 'node',
     osmId: Number(id.replace(/\D/g, '')),
     geometryHash: `hash-${id}`,
@@ -24,8 +25,8 @@ const feature = (id: string, coordinates: [number, number]): SourceFeature => ({
 
 beforeEach(() => {
   appStore.setState({
-    place: { name: 'Central Jakarta–Senayan', source: 'bundled' },
-    data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.85, -6.16])] },
+    place: { name: 'Central Jakarta–Senayan', source: 'overpass' },
+    data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.85, -6.16])], verificationStatus: 'verified' },
     map: { center: [106.82, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: { kind: 'route', id: 'human:route', geometry: route, geometryHash: hashGeometrySync(route) },
     poster: { spec: { ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: [] }, status: 'empty', renderedFeatureIds: [], warnings: [] },

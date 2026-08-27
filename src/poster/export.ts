@@ -48,8 +48,8 @@ export const exportArtwork = async (format: 'png' | 'svg', download = true) => {
   const svg = serializePosterSvg()
   if (format === 'svg') {
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-    if (download) downloadBlob(blob, 'maptruth-jakarta.svg')
-    return { format, fileName: 'maptruth-jakarta.svg', bytes: blob.size }
+    if (download) downloadBlob(blob, 'maptruth-live-osm.svg')
+    return { format, fileName: 'maptruth-live-osm.svg', bytes: blob.size }
   }
 
   const canvas = document.createElement('canvas')
@@ -66,7 +66,6 @@ export const exportArtwork = async (format: 'png' | 'svg', download = true) => {
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('PNG export failed'))), 'image/png'),
   )
-  if (download) downloadBlob(blob, 'maptruth-jakarta.png')
-  return { format, fileName: 'maptruth-jakarta.png', bytes: blob.size, width: 2400, height: 3000 }
+  if (download) downloadBlob(blob, 'maptruth-live-osm.png')
+  return { format, fileName: 'maptruth-live-osm.png', bytes: blob.size, width: 2400, height: 3000 }
 }
-

@@ -4,7 +4,7 @@ import { PosterSvg } from './PosterSvg'
 export function TruthSeam() {
   const seam = useAppStore((state) => state.ui.seam)
   const mode = useAppStore((state) => state.ui.comparisonMode)
-  const artLayer = useAppStore((state) => state.ai.result?.mapTruthArtLayer)
+  const artLayer = useAppStore((state) => state.ai.routes.mapTruthGrounded.imageDataUrl)
   const setSeam = (value: number) => appStore.setState((state) => ({ ui: { ...state.ui, seam: value } }))
 
   return (
