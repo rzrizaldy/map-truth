@@ -95,6 +95,8 @@ export type MapTruthState = {
     label?: string
     /** What the caller actually asked for, when the place was reached by name. */
     query?: string
+    /** Real coordinates, when the place was resolved rather than panned to. */
+    center?: [number, number]
     resolving?: boolean
   }
   map: {

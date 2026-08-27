@@ -193,7 +193,7 @@ export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Pr
   captureUndo(`focus on ${displayName}`)
   await runtime.navigate(resolved.center, resolved.zoom)
   appStore.setState((state) => ({
-    place: { name: displayName, label: resolved.label, query: asked, source: 'geocoded', resolving: false },
+    place: { name: displayName, label: resolved.label, query: asked, center: resolved.center, source: 'geocoded', resolving: false },
     ui: { ...state.ui, canUndo: true },
   }))
   addActivity('focus_place', 'ok', `Map moved to ${resolved.label}`, {

@@ -34,12 +34,15 @@ const CONTACT = 'MapTruth/1.0 (https://map-truth.vercel.app)'
  * lockable and what someone asking for a city poster actually wants.
  */
 export const MIN_FOCUS_ZOOM = 12.5
+// A single building's bbox is metres across. Framing it exactly leaves a poster
+// with one roof and no city around it, so keep some neighbourhood in view.
+export const MAX_FOCUS_ZOOM = 14.6
 
 export const zoomForBbox = ([west, south, east, north]: [number, number, number, number]) => {
   const span = Math.max(east - west, (north - south) * 1.6)
   if (!Number.isFinite(span) || span <= 0) return 14
   const zoom = Math.log2(360 / span) + 0.4
-  return Math.min(16, Math.max(MIN_FOCUS_ZOOM, Number(zoom.toFixed(2))))
+  return Math.min(MAX_FOCUS_ZOOM, Math.max(MIN_FOCUS_ZOOM, Number(zoom.toFixed(2))))
 }
 
 export const toGeocodedPlace = (place: NominatimPlace): GeocodedPlace | null => {

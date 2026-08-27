@@ -37,3 +37,31 @@ describe('resolving pins against OpenStreetMap', () => {
     expect(await resolveTruthPins('demo DPR Jakarta', ['Jakarta'], bbox, lookup)).toEqual([])
   })
 })
+
+describe('the focused place is the subject', () => {
+  it('is pinned even though it is also the map centre', async () => {
+    // Regression: asking for the DPR building centred on it and then left it
+    // unmarked, because it read as "the place we are already on".
+    const { syncTruthPins } = await import('./pinSync')
+    const { appStore } = await import('../state/store')
+    appStore.setState({
+      place: {
+        name: 'Dewan Perwakilan Rakyat', label: 'Dewan Perwakilan Rakyat, Jakarta',
+        query: 'DPR Jakarta', center: [106.80029, -6.2102083], source: 'geocoded',
+      },
+      ai: { ...appStore.getState().ai, prompt: 'Peta demo DPR Jakarta' },
+      data: {
+        status: 'ready', features: [], verificationStatus: 'idle',
+        lock: {
+          id: 'live:x', kind: 'live', bbox, zoom: 14,
+          sourceRevision: 'r', geometryHash: 'h', createdAt: '', featureCount: 0,
+        },
+      },
+      truthPins: [],
+    })
+    await syncTruthPins()
+    const pins = appStore.getState().truthPins
+    expect(pins.map((pin) => pin.name)).toContain('Dewan Perwakilan Rakyat')
+    expect(pins[0].center).toEqual([106.80029, -6.2102083])
+  })
+})

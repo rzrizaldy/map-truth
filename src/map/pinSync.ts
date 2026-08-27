@@ -19,12 +19,26 @@ export const syncTruthPins = async () => {
   if (inFlight === key) return
   inFlight = key
 
-  const pins = await resolveTruthPins(
+  const found = await resolveTruthPins(
     state.ai.prompt,
     [state.place.name, state.place.label, state.place.query],
     bbox,
     lookupWithinViewport,
   )
+
+  // A place reached by name is the subject of the brief, so mark it even though
+  // it is also the map's centre — otherwise asking for the DPR building centres
+  // on it and then leaves it unlabelled.
+  const focused = state.place.source === 'geocoded' && state.place.center
+    ? [{
+        term: state.place.query ?? state.place.name,
+        name: state.place.name,
+        label: state.place.label ?? state.place.name,
+        center: state.place.center,
+      }]
+    : []
+  const seen = new Set(focused.map((pin) => pin.name.toLowerCase()))
+  const pins = [...focused, ...found.filter((pin) => !seen.has(pin.name.toLowerCase()))]
 
   // The viewport may have moved on while we were waiting.
   if (appStore.getState().data.lock?.bbox.join(',') !== bbox.join(',')) return

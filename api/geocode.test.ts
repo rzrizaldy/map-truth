@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GET, zoomForBbox, MIN_FOCUS_ZOOM, toGeocodedPlace } from './geocode'
+import { GET, zoomForBbox, MAX_FOCUS_ZOOM, MIN_FOCUS_ZOOM, toGeocodedPlace } from './geocode'
 import { liveBboxSpanOk } from '../src/map/boundary.js'
 
 // The widest viewport we expect to serve, in CSS pixels.
@@ -18,8 +18,11 @@ describe('focus zoom', () => {
     expect(zoomForBbox([2.335, 48.859, 2.339, 48.862])).toBeGreaterThan(MIN_FOCUS_ZOOM)
   })
 
-  it('caps how far it will ever zoom in', () => {
-    expect(zoomForBbox([2.3364, 48.8606, 2.3364001, 48.8606001])).toBeLessThanOrEqual(16)
+  it('keeps a neighbourhood in view around a single building', () => {
+    const zoom = zoomForBbox([2.3364, 48.8606, 2.3364001, 48.8606001])
+    expect(zoom).toBeLessThanOrEqual(MAX_FOCUS_ZOOM)
+    // Tight enough to be the subject, wide enough to sit in a city.
+    expect(zoom).toBeGreaterThan(13.5)
   })
 })
 
