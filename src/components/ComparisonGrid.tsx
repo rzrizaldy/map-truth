@@ -71,7 +71,7 @@ export function ComparisonGrid() {
       <div className="step-head">
         <span className="step-num">3</span>
         <h2>Spot the difference</h2>
-        <p>Same prompt, three times. Only the third one knows what the streets really look like.</p>
+        <p>Same prompt, twice. Only one of them was shown where the place actually is.</p>
       </div>
 
       {ai.pendingRoutes?.length ? (

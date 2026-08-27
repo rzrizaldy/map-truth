@@ -39,8 +39,9 @@ export function StudioPage() {
         <div className="section-kicker">GROUND AI IMAGES IN A REAL MAP</div>
         <h1>AI makes up cities.<br /><em>Give it a real one.</em></h1>
         <p>
-          Ask for a poster of any place. You’ll get the same prompt twice — once with the AI guessing,
-          once after an agent found the place and handed it the real map. The difference is obvious.
+          Ask for a map of any place. You’ll get the same prompt twice — once with the AI guessing,
+          once after an agent found the place and handed it the real map. A guessed map can look
+          more convincing than the real one. That is the problem.
         </p>
       </section>
 
