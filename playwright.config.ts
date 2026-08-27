@@ -4,6 +4,7 @@ const isCI = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/config/**',
   timeout: 75_000,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
