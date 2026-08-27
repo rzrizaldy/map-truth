@@ -39,3 +39,38 @@ describe('live OSM viewport normalization', () => {
     expect(first[0].properties.osmId).toBeUndefined()
   })
 })
+
+describe('viewport budgeting', () => {
+  const line = (offset: number): ViewportCandidate => ({
+    source: 'openmaptiles', sourceLayer: 'transportation', id: `r${offset}`,
+    properties: { class: 'primary' },
+    geometry: { type: 'LineString', coordinates: [[106.8 + offset / 1e5, -6.2], [106.81 + offset / 1e5, -6.19]] },
+  })
+  const park = (offset: number): ViewportCandidate => ({
+    source: 'openmaptiles', sourceLayer: 'park', id: `p${offset}`,
+    properties: { leisure: 'park' },
+    geometry: { type: 'Polygon', coordinates: [[[106.8, -6.2], [106.81, -6.2], [106.81, -6.19 + offset / 1e5], [106.8, -6.2]]] },
+  })
+
+  it('never starves roads behind parks when the cap is hit', () => {
+    const candidates = [
+      ...Array.from({ length: 80 }, (_, index) => park(index)),
+      ...Array.from({ length: 80 }, (_, index) => line(index)),
+    ]
+    const result = normalizeViewportFeatures(candidates, undefined, 100)
+    const roads = result.filter((feature) => feature.properties.type === 'road')
+    expect(result).toHaveLength(100)
+    expect(roads.length).toBeGreaterThanOrEqual(60)
+  })
+
+  it('drops features from loaded tiles that lie outside the visible viewport', () => {
+    const inside = line(0)
+    const outside: ViewportCandidate = {
+      source: 'openmaptiles', sourceLayer: 'transportation', id: 'far',
+      properties: { class: 'primary' },
+      geometry: { type: 'LineString', coordinates: [[120.0, 20.0], [120.1, 20.1]] },
+    }
+    const result = normalizeViewportFeatures([inside, outside], undefined, 100, [106.79, -6.21, 106.83, -6.18])
+    expect(result).toHaveLength(1)
+  })
+})

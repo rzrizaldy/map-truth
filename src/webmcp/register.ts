@@ -27,7 +27,7 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         ...state.ui,
         webmcpAvailable: false,
         webmcpStatus: 'unavailable',
-        webmcpMessage: 'Manual mode is active. Enable Chrome WebMCP testing or use an origin-trial build for agent mode.',
+        webmcpMessage: 'Manual mode. Every button here is the same function the agent calls. For agent mode, open this page in Chrome with chrome://flags/#enable-webmcp-testing enabled, or deploy with a WebMCP origin-trial token.',
       },
     }))
     return () => undefined

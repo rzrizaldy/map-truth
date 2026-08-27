@@ -18,6 +18,7 @@ export type SourceFeatureProperties = {
   sourceLayer?: string
   tileFeatureId?: string
   sourceRevision?: string
+  rank?: number
   geometryHash: string
 }
 

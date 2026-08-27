@@ -24,20 +24,20 @@ export function StatusRail() {
       <div><span className="status-dot" /> {label}</div>
       <strong>{data.features.length ? `${data.features.length.toLocaleString()} paths` : mapReady ? 'vector sources ready' : 'connecting to tiles'}</strong>
       <span>{data.lock ? `${place.name} · ${data.lock.geometryHash.slice(0, 13)}` : 'move the map, then lock the viewport'}</span>
-      <span className="cost-boundary">GPT IMAGE · EXPLICIT COST GATE</span>
+      <span className="cost-boundary">Cost gate on</span>
       <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 8 tools' : 'Manual mode'}</span>
     </div>
   )
 }
 
-export function AgentReceiptRail({ compact = false }: { compact?: boolean }) {
+export function AgentReceiptRail() {
   const activity = useAppStore((state) => state.activity)
   const selectedId = useAppStore((state) => state.ui.selectedReceiptId)
   const canUndo = useAppStore((state) => state.ui.canUndo)
   return (
-    <aside className={`receipt-rail ${compact ? 'receipt-rail--compact' : ''}`} aria-label="Visible agent execution receipts">
+    <aside className="receipt-rail" aria-label="Visible agent execution receipts">
       <div className="receipt-heading">
-        <div><span>VISIBLE TOOL RECEIPTS</span><strong>Agent actions leave evidence</strong></div>
+        <div><span>VISIBLE TOOL RECEIPTS</span><strong>Every action leaves evidence</strong></div>
         <button type="button" disabled={!canUndo} onClick={() => void undoLastChange()}>Undo last change</button>
       </div>
       <div className="receipt-list">

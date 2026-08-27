@@ -3,25 +3,25 @@ import { expect, test } from '@playwright/test'
 test('the whole journey lives on one page', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /Art direction can wander/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Pick a place\. Lock the truth\./ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Watch evidence change the image/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Lock this view' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lock a place' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Compare the evidence' })).toBeVisible()
+  await expect(page.locator('#step-1').getByRole('button', { name: 'Lock this view' })).toBeVisible()
   await expect(page.getByText('Manual mode', { exact: true })).toBeVisible({ timeout: 15_000 })
 })
 
 test('legacy /demo and /about links land on the same journey', async ({ page }) => {
   await page.goto('/about')
   await expect(page).toHaveURL(/\/(#.*)?$/)
-  await expect(page.getByRole('heading', { name: /Pick a place\. Lock the truth\./ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lock a place' })).toBeVisible()
 })
 
 test('live viewport lock does not wait for Overpass', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
-  await page.getByRole('button', { name: 'Lock this view' }).click()
-  await expect(page.getByText('LIVE OSM LOCK', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
+  await page.locator('#step-1').getByRole('button', { name: 'Lock this view' }).click()
+  await expect(page.getByText('OSM locked', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText(/live OSM features locked/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Generate all 3 with GPT Image 2' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Generate all 3' })).toBeVisible()
   await expect(page.locator('[data-source-id^="tile:"]').first()).toHaveAttribute('data-geometry-hash')
 })
 
@@ -92,8 +92,8 @@ test('an agent can navigate and lock through WebMCP alone', async ({ page }) => 
 test('exports stay attributed and script-free', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
-  await page.getByRole('button', { name: 'Lock this view' }).click()
-  await expect(page.getByText('LIVE OSM LOCK', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
+  await page.locator('#step-1').getByRole('button', { name: 'Lock this view' }).click()
+  await expect(page.getByText('OSM locked', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
 
   const svgDownload = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export SVG' }).click()
@@ -107,7 +107,7 @@ test('exports stay attributed and script-free', async ({ page }) => {
 test('the three routes stay legible on mobile', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Prompt only' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Map screenshot' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'MapTruth + WebMCP' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Generate routes 01 + 02 now' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Screenshot' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'WebMCP map truth' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Generate routes 1 + 2' })).toBeVisible()
 })

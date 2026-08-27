@@ -14,7 +14,7 @@ type PosterSvgProps = {
 }
 
 const colors = {
-  'red-cream-black': { paper: '#F2E7CF', ink: '#141512', accent: '#D43D28', water: '#657A7D', park: '#A9AD86' },
+  'red-cream-black': { paper: '#F8F9FA', ink: '#202124', accent: '#1A73E8', water: '#AADAFF', park: '#CDEAC4' },
   'blue-white': { paper: '#F7FAFB', ink: '#12324A', accent: '#1877A2', water: '#4B99B5', park: '#B9D6CE' },
   sunset: { paper: '#F4D7B7', ink: '#2B1A1A', accent: '#D85D3B', water: '#6E7897', park: '#B8A873' },
 } as const
@@ -28,15 +28,25 @@ const featureStyle = (
   sourceMode: boolean,
 ) => {
   if (sourceMode) {
-    if (feature.properties.type === 'park') return { fill: '#DADBD1', stroke: '#85877F', strokeWidth: 1 }
-    if (feature.properties.type === 'water') return { fill: 'none', stroke: '#789BA4', strokeWidth: 3 }
-    if (feature.properties.type === 'landmark') return { fill: '#141512', stroke: '#FFF9EC', strokeWidth: 2 }
-    return { fill: 'none', stroke: '#7C7E78', strokeWidth: emphasized ? 5 : 2 }
+    if (feature.properties.type === 'park') return { fill: '#e6efe3', stroke: 'none', strokeWidth: 0 }
+    if (feature.properties.type === 'water') return { fill: '#dceeff', stroke: '#dceeff', strokeWidth: 2.5 }
+    if (feature.properties.type === 'landmark') return { fill: '#5f6368', stroke: '#ffffff', strokeWidth: 1.5 }
+    const sourceRank = feature.properties.rank ?? 7
+    if (emphasized) return { fill: 'none', stroke: '#202124', strokeWidth: 4 }
+    if (sourceRank <= 3) return { fill: 'none', stroke: '#80868b', strokeWidth: 2 }
+    return { fill: 'none', stroke: '#bdc1c6', strokeWidth: 1 }
   }
-  if (feature.properties.type === 'park') return { fill: palette.park, stroke: palette.ink, strokeWidth: 1.2 }
-  if (feature.properties.type === 'water') return { fill: 'none', stroke: palette.water, strokeWidth: emphasized ? 7 : 4 }
-  if (feature.properties.type === 'landmark') return { fill: emphasized ? palette.accent : palette.ink, stroke: palette.paper, strokeWidth: 2.5 }
-  return { fill: 'none', stroke: emphasized ? palette.accent : palette.ink, strokeWidth: emphasized ? 7 : 2.4 }
+  if (feature.properties.type === 'park') return { fill: palette.park, stroke: 'none', strokeWidth: 0 }
+  if (feature.properties.type === 'water') return { fill: palette.water, stroke: palette.water, strokeWidth: emphasized ? 6 : 3 }
+  if (feature.properties.type === 'landmark') return { fill: emphasized ? palette.accent : palette.ink, stroke: palette.paper, strokeWidth: 2 }
+  // Weight roads by importance so 4,000 paths still read as a street network
+  // instead of one solid black scribble.
+  const rank = feature.properties.rank ?? 7
+  if (emphasized) return { fill: 'none', stroke: palette.accent, strokeWidth: 6 }
+  if (rank <= 1) return { fill: 'none', stroke: palette.ink, strokeWidth: 3.4 }
+  if (rank <= 3) return { fill: 'none', stroke: palette.ink, strokeWidth: 2.2 }
+  if (rank <= 5) return { fill: 'none', stroke: '#5f6368', strokeWidth: 1.4 }
+  return { fill: 'none', stroke: '#9aa0a6', strokeWidth: 0.9 }
 }
 
 const shouldLabel = (feature: SourceFeature, density: string, index: number, emphasized: boolean) => {
@@ -113,7 +123,7 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
               strokeLinejoin="round"
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
-              opacity={feature.properties.type === 'road' && !isEmphasized ? 0.72 : 1}
+              opacity={1}
               data-source-id={feature.properties.id}
               data-geometry-hash={feature.properties.geometryHash}
               data-feature-class={feature.properties.type}

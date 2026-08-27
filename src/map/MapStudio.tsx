@@ -20,32 +20,32 @@ const addLockOverlay = (map: MapLibreMap) => {
   map.addLayer({
     id: 'maptruth-lock-areas', type: 'fill', source: 'maptruth-lock',
     filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
-    paint: { 'fill-color': ['match', ['get', 'type'], 'water', '#6f98a2', 'park', '#a8ad82', '#d43d28'], 'fill-opacity': 0.23, 'fill-outline-color': '#141512' },
+    paint: { 'fill-color': ['match', ['get', 'type'], 'water', '#aadaff', 'park', '#cdeac4', '#1a73e8'], 'fill-opacity': 0.5, 'fill-outline-color': '#1a73e8' },
   })
   map.addLayer({
     id: 'maptruth-lock-lines', type: 'line', source: 'maptruth-lock',
     filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
-    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4f8290', 'road', '#d43d28', '#141512'], 'line-width': 2.2, 'line-opacity': 0.78 },
+    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4285f4', 'road', '#1a73e8', '#5f6368'], 'line-width': 2, 'line-opacity': 0.8 },
   })
   map.addLayer({
     id: 'maptruth-lock-points', type: 'circle', source: 'maptruth-lock',
     filter: ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]],
-    paint: { 'circle-radius': 4.5, 'circle-color': '#d43d28', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff9ec' },
+    paint: { 'circle-radius': 4.5, 'circle-color': '#ea4335', 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' },
   })
   map.addLayer({
     id: 'maptruth-lock-areas-selected', type: 'fill', source: 'maptruth-lock',
     filter: ['==', ['get', 'id'], '__none__'],
-    paint: { 'fill-color': '#d43d28', 'fill-opacity': 0.48 },
+    paint: { 'fill-color': '#f9ab00', 'fill-opacity': 0.55 },
   })
   map.addLayer({
     id: 'maptruth-lock-lines-selected', type: 'line', source: 'maptruth-lock',
     filter: ['==', ['get', 'id'], '__none__'],
-    paint: { 'line-color': '#fff9ec', 'line-width': 6 },
+    paint: { 'line-color': '#f9ab00', 'line-width': 6 },
   })
   map.addLayer({
     id: 'maptruth-lock-points-selected', type: 'circle', source: 'maptruth-lock',
     filter: ['==', ['get', 'id'], '__none__'],
-    paint: { 'circle-radius': 8, 'circle-color': '#fff9ec', 'circle-stroke-width': 3, 'circle-stroke-color': '#d43d28' },
+    paint: { 'circle-radius': 8, 'circle-color': '#f9ab00', 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' },
   })
 }
 
@@ -157,12 +157,12 @@ export function MapStudio() {
       appStore.setState((state) => ({ data: { ...state.data, status: 'loading', error: undefined } }))
       const cacheKey = liveLockCacheKey(bbox, zoom)
       const cached = await readCachedLock(cacheKey)
-      let normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map))
+      let normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map), undefined, undefined, bbox)
       if (!normalized.length && !map.areTilesLoaded()) {
         // Tiles for this viewport are still arriving. Give them one settle pass
         // before telling the caller there is nothing here.
         await settleTiles()
-        normalized = normalizeViewportFeatures(candidatesFromMap(map))
+        normalized = normalizeViewportFeatures(candidatesFromMap(map), undefined, undefined, bbox)
       }
       if (!normalized.length) {
         appStore.setState((state) => ({ data: { ...state.data, status: 'error', error: 'No supported OSM features are loaded. Zoom closer or move the map.' } }))
@@ -282,7 +282,7 @@ export function MapStudio() {
   }, [selectedReceipt])
 
   const data = useAppStore((state) => state.data)
-  const metaLabel = data.lock?.kind === 'verified' ? 'OSM VERIFIED' : data.lock ? 'LIVE OSM LOCK' : 'LIVE VECTOR VIEWPORT'
+  const metaLabel = data.lock?.kind === 'verified' ? 'OSM verified' : data.lock ? 'OSM locked' : 'Live vector map'
 
   return (
     <div className="map-shell map-shell--demo">

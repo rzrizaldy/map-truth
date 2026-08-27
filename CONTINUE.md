@@ -1,36 +1,34 @@
 # MapTruth — continuation handoff
 
-Live target: [map-truth.vercel.app](https://map-truth.vercel.app)
+Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
-## Architecture now
+## Shape now
 
-- `/demo` opens a worldwide OpenFreeMap/OSM vector basemap at New York.
-- `/about` uses the same live pipeline with a Jakarta starting camera and TerraDraw.
-- No city GeoJSON, PBF, feature index, or data-preparation script ships with the app.
-- `MapStudio` extracts supported features directly from loaded vector sources, creates traceable `tile:` IDs, hashes exact tile geometry, and caches viewport locks in IndexedDB.
-- `Verify with Overpass` optionally upgrades a live lock to canonical `osm:` IDs. Failure preserves the live lock and never blocks routes 01/02/03.
-- `/api/generate-route` runs one real `gpt-image-2` route. The compatibility `/api/generate-comparison` wrapper remains.
-- WebMCP registers eight agent-canvas tools. Every invocation shares manual command functions and leaves a visible receipt.
+- **One page, three steps.** `StudioPage` renders hero → step 1 lock → step 2 prompt → step 3 compare → proof seam → receipts. `/demo` and `/about` redirect to `/`.
+- **Google Maps palette.** Light surfaces, grey type, one blue accent (`--blue: #1a73e8`). Tokens live in `src/index.css`; the map overlay and `PosterSvg` follow the same colours.
+- Two Vercel Functions only: `api/generate-route.ts` and `api/osm-extract.ts`. Shared code lives in `api/_lib/`, tests are excluded by `.vercelignore`.
 
-## Product invariants
+## Hard-won invariants
 
-- Never label tile-derived fragments as canonical OSM entities.
-- Only successful Overpass replacement receives `OSM VERIFIED` status.
-- Route 03 GPT output is an art layer. It must never supply roads, water, routes, boundaries, labels, place names, landmarks, icons, coordinates, or map silhouettes.
-- Manual mode remains complete when `document.modelContext` is absent.
-- Agent-triggered image generation stops at a visible cost approval gate.
-- No fake generated images, client-side API keys, hidden agent mutations, or bundled city data.
+- **API routes must export named methods** (`export function POST`). A default export is read as `(req, res)`; the returned `Response` is discarded and every request hangs until timeout.
+- **Verify a geometry hash with the function that produced it.** Live tile features use `hashGeometrySync` (`fnv1a:` prefix); Overpass features use SHA-256. Use `geometryHashMatches`.
+- **`navigate_map` must settle tiles before resolving**, or an agent's immediate `lock_live_osm` sees an empty source.
+- **Never truncate the feature set by draw order.** Budget per class and rank by importance, or roads vanish behind parks and whole neighbourhoods render bare.
+- Never label tile-derived fragments as canonical OSM entities. Only a successful Overpass replacement earns `OSM VERIFIED`.
+- Route 3 GPT output is an art layer only: no roads, water, routes, boundaries, labels, place names, landmarks, icons, coordinates, or map silhouettes.
+- Manual mode stays complete when `document.modelContext` is absent.
+- Agent-triggered generation stops at a visible cost approval gate.
+- No fake generated images, no client-side API keys, no bundled city data.
 
 ## Primary files
 
-- `src/map/liveOsm.ts` — classification, deterministic viewport IDs, lock identity
-- `src/map/MapStudio.tsx` — MapLibre source queries, overlay, cache, runtime adapter
-- `src/webmcp/register.ts` and `commands.ts` — eight tool contracts and manual parity
-- `src/ai/generation.ts` — independent client route state and approval staging
-- `api/generate-route.ts` — validated single-route image generation
-- `src/components/StudioPanels.tsx` — context ribbon and tool receipts
-- `src/components/ComparisonGrid.tsx` — per-route progress, retry, cancellation, preview ladder
+- `src/map/liveOsm.ts` — classification, ranking, per-class budget, viewport clipping, lock identity
+- `src/map/MapStudio.tsx` — MapLibre source queries, overlay, tile settling, cache, runtime adapter
+- `src/webmcp/register.ts` + `commands.ts` — eight tool contracts and manual parity
+- `src/ai/generation.ts` — per-route client state and approval staging
+- `api/generate-route.ts`, `api/osm-extract.ts` — validated Web handlers
+- `src/pages/Studio.tsx`, `src/components/ComparisonGrid.tsx` — the three-step journey
 
-## Acceptance boundary
+## Open item
 
-CI and ordinary browser acceptance can validate the complete manual path. WebMCP completion must remain explicitly blocked until connected Chrome exposes `document.modelContext.registerTool`, discovers all eight tools, and successfully executes them against the deployed origin.
+`WEBMCP_ORIGIN_TRIAL_TOKEN` is not configured, so production Chrome reports Manual mode unless the tester enables `chrome://flags/#enable-webmcp-testing`. Register the origin trial and set it as a Vercel **build** env var to make agent mode discoverable for ordinary visitors. Do not claim WebMCP acceptance until a connected Chrome discovers and executes all eight tools against the deployed origin.

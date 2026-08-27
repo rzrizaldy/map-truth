@@ -43,7 +43,7 @@ const baseState = (): MapTruthState => ({
   },
   ai: {
     prompt:
-      'Create a bold editorial map poster in black, cream, and dispatch red. Emphasize major roads and civic landmarks. Keep labels minimal.',
+      'Jakarta map overlay with a hypothetical NYC + NJ region based on vibes.',
     routes: emptyRoutes(),
   },
   activity: [],

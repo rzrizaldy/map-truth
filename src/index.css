@@ -1,14 +1,25 @@
 :root {
-  font-family: 'Source Sans 3', sans-serif;
-  color: #141512;
-  background: #f2e7cf;
+  /* Google Maps screenshot palette: light surfaces, grey type, one blue accent. */
+  --paper: #f8f9fa;
+  --surface: #ffffff;
+  --ink: #202124;
+  --muted: #5f6368;
+  --line: #dadce0;
+  --blue: #1a73e8;
+  --blue-dark: #1557b0;
+  --blue-soft: #e8f0fe;
+  --green: #34a853;
+  --park: #cdeac4;
+  --water: #aadaff;
+  --road: #f9ab00;
+  --red: #ea4335;
+  --shadow: 0 1px 3px rgba(60, 64, 67, .18), 0 4px 12px rgba(60, 64, 67, .12);
+
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --paper: #f2e7cf;
-  --ink: #141512;
-  --red: #d43d28;
-  --asphalt: #62645d;
-  --white: #fff9ec;
 }
 
 * { box-sizing: border-box; }
@@ -17,10 +28,9 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper);
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
-::selection { background: var(--red); color: var(--white); }
+::selection { background: var(--blue-soft); color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-

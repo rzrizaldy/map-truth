@@ -2,67 +2,78 @@
 
 [![CI](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/rzrizaldy/map-truth/actions/workflows/ci.yml)
 
-MapTruth is an agent-first WebMCP map-art experiment. Pan a worldwide OpenStreetMap vector map, lock the live viewport in milliseconds, and compare three real GPT Image routes: prompt only, screenshot grounded, and deterministic MapTruth geography over a generated art layer.
+**One prompt, three images. The only thing that changes is how much real map the AI was given.**
 
-## Live OSM, no bundled city dataset
+Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
-Both `/demo` and `/about` use the OpenFreeMap vector style. MapTruth inspects the vector sources already loaded by MapLibre with `querySourceFeatures`, falling back to `queryRenderedFeatures`, and normalizes supported roads, water, parks, and landmarks.
+MapTruth is a WebMCP demo. An agent (or you) locks a real OpenStreetMap viewport, writes one art brief, and compares three levels of grounding side by side.
 
-- Tile-derived IDs use `tile:<source-layer>:<source-id>:<geometry-hash>` and are never presented as canonical OSM IDs.
-- Locks record viewport, zoom, source revision, feature provenance, and geometry hashes.
-- IndexedDB caches runtime locks by viewport and source revision. Nothing is bundled at build time.
-- `Verify with Overpass` is an optional upgrade to canonical `osm:` identifiers. A timeout preserves the live lock.
-- Map data © OpenStreetMap contributors under the ODbL. Attribution appears in the interface and exports.
+| Level | Evidence given to GPT Image 2 | Geographic claim |
+|---|---|---|
+| 1 · Prompt only | The brief alone | Unverified — the model invents the city |
+| 2 · Screenshot | The brief plus the captured MapLibre viewport | Visually guided — topology can still drift |
+| 3 · WebMCP map truth | The brief plus a compact lock summary, with geography **forbidden** in the output | Geometry-locked — MapTruth composites exact OSM vectors over the art layer |
 
-## Three independent GPT Image routes
+## The journey
 
-`/api/generate-route` validates and runs one `gpt-image-2` route per request:
+The whole demo is one page, three steps:
 
-1. `promptOnly` receives the art brief alone.
-2. `screenshotGrounded` receives the automatically captured MapLibre viewport as high-fidelity image context.
-3. `mapTruthGrounded` receives the screenshot and a compact lock summary, but is explicitly prohibited from drawing geography. MapTruth composites exact source paths above its art layer.
+1. **Lock a place** — pan anywhere, hit *Lock this view*. The OSM vectors already loaded in MapLibre become hashed, traceable geometry in milliseconds. *Verify with Overpass* is optional and only upgrades `tile:` IDs to canonical `osm:` IDs.
+2. **Write one prompt** — a single art brief goes to all three routes.
+3. **Compare the evidence** — each route runs independently, keeps partial success, and supports per-route retry and cancellation. Then drag the truth seam to reveal the neutral source under route 3.
 
-The UI tracks each route independently, preserves partial success, supports per-route retry and local cancellation, and never substitutes fake generated images. `/api/generate-comparison` remains as a compatibility wrapper.
+Old `/demo` and `/about` links land on the same page.
 
-For local development:
+## Live OSM, no bundled dataset
 
-```bash
-npm install
-npm run dev
-```
+MapTruth inspects the vector sources MapLibre already loaded via `querySourceFeatures` (falling back to `queryRenderedFeatures`) and normalizes roads, water, parks, and landmarks.
 
-To exercise server-side image generation locally, run `vercel dev` and set `OPENAI_API_KEY` in `.env.local`. Never expose it through a `VITE_` variable. On Vercel the endpoint may alternatively use the configured AI Gateway model ID `openai/gpt-image-2`.
+- Tile-derived IDs are `tile:<source-layer>:<source-id>:<geometry-hash>` and are never presented as canonical OSM IDs.
+- Candidates outside the visible viewport are dropped, so the lock matches what you actually saw.
+- When more features are in view than the cap allows, each class gets its own budget and features are ranked by importance (motorway before residential, named landmarks before unnamed). A single global cap used to starve roads behind parks.
+- Locks record viewport, zoom, source revision, provenance, and geometry hashes. IndexedDB caches runtime locks by viewport and revision. Nothing is bundled at build time.
+- Map data © OpenStreetMap contributors under the ODbL, credited in the interface and in every export.
 
 ## Agent-first WebMCP canvas
 
-When `document.modelContext` is available, the page registers eight imperative tools:
+When `document.modelContext` exists, the page registers eight tools:
 
-- `inspect_map_context`
-- `navigate_map`
-- `lock_live_osm`
-- `verify_osm_lock`
-- `generate_comparison`
-- `inspect_comparison`
-- `verify_geography`
-- `export_artwork`
+`inspect_map_context` · `navigate_map` · `lock_live_osm` · `verify_osm_lock` · `generate_comparison` · `inspect_comparison` · `verify_geography` · `export_artwork`
 
-Every invocation uses the same command functions as the manual UI. Mutating actions leave visible selectable receipts, affected features highlight on the map, and costed generation stops at a visible approval gate. When WebMCP is absent, the page reports Manual mode and remains fully functional.
+Every tool calls the same functions the buttons do. Mutating actions leave visible, selectable receipts; affected features highlight on the map; costed generation stops at a visible approval gate. With no WebMCP the page reports **Manual mode** and stays fully usable.
 
-Local WebMCP testing requires Chrome with `chrome://flags/#enable-webmcp-testing` enabled and relaunched. Production discovery additionally requires a valid `WEBMCP_ORIGIN_TRIAL_TOKEN`, emitted by `vercel.ts` only when configured.
+`navigate_map` waits for the new viewport's tiles to settle before resolving, so an agent that immediately calls `lock_live_osm` gets real geometry rather than an empty source.
 
-## Verification and deployment
+### Enabling agent mode
+
+- **Locally / for testing:** Chrome with `chrome://flags/#enable-webmcp-testing` enabled, then relaunched.
+- **In production:** a WebMCP origin trial token. Set `WEBMCP_ORIGIN_TRIAL_TOKEN` as a Vercel **build** environment variable; `vercel.ts` emits the `Origin-Trial` header only when it is configured. Without it, production Chrome reports Manual mode by design.
+
+## API
+
+Two Vercel Functions, both web-standard `POST` handlers:
+
+- `POST /api/generate-route` — validates and runs exactly one `gpt-image-2` route.
+- `POST /api/osm-extract` — canonical Overpass verification for a bounded bbox.
+
+> Vercel treats a **default** export as the Node `(req, res)` signature and discards a returned `Response`. Named method exports (`export function POST`) are required for the Web handler shape — a default export makes every request hang until the function times out.
+
+Set `OPENAI_API_KEY` server-side (never through a `VITE_` variable). On Vercel the endpoint can alternatively use the AI Gateway model ID `openai/gpt-image-2`.
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm run test:e2e
-npx @vercel/config compile vercel.ts
+npm install
+npm run dev          # UI only
+npm run dev:vercel   # UI + API (vercel dev)
 ```
 
-Unit tests cover live tile classification and deduplication, stable locks, route-specific API validation, prompt safety, geographic hash verification, unsafe text escaping, and export attribution. Playwright covers the landing, live demo states, manual fallback, the Jakarta starting camera, responsive comparison narrative, and downloads.
+## Verification
 
-GitHub Actions runs lint, type-check, unit tests, production build, and desktop/mobile Chromium on pushes and pull requests to `main`. Failed E2E runs upload traces and screenshots. Vercel’s Git integration deploys passing `main` revisions to [map-truth.vercel.app](https://map-truth.vercel.app).
+```bash
+npm run lint && npm run typecheck && npm test && npm run build && npm run test:e2e
+```
 
-MapTruth verifies provenance against the OSM-derived geometry available to the current runtime. It does not claim OpenStreetMap is perfectly complete or current, and it does not claim WebMCP acceptance until connected Chrome exposes and successfully executes `document.modelContext.registerTool`.
+Unit tests cover tile classification, per-class budgeting and viewport clipping, stable locks, hash verification across both hashing paths, route-specific API validation, prompt safety, unsafe text escaping, and export attribution. Playwright covers the one-page journey, legacy redirects, the live lock, WebMCP tool registration, a full agent-only navigate → lock → inspect → verify run, attributed exports, and mobile layout.
+
+GitHub Actions runs lint, type-check, unit tests, build, and desktop/mobile Chromium on pushes and PRs to `main`; failures upload traces and screenshots. Vercel's Git integration deploys passing `main` revisions.
+
+MapTruth verifies provenance against the OSM-derived geometry available to the current runtime. It does not claim OpenStreetMap is perfectly complete or current.
