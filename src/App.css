@@ -94,7 +94,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 .taste-visual { width: 100%; aspect-ratio: 2 / 3; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--paper); }
 .taste-visual img, .taste-visual svg { width: 100%; height: 100%; display: block; object-fit: cover; }
 .taste-example { position: relative; height: 100%; }
-.taste-example img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .82; }
+.taste-example img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .taste-example-tag { position: absolute; top: 8px; left: 8px; padding: 4px 9px; border-radius: 999px; background: rgba(32,33,36,.78); color: #fff; font: 600 10px/1 'IBM Plex Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
 .taste-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .taste-empty strong { color: var(--ink); font: 600 18px/1.1 'Barlow Condensed', sans-serif; text-transform: uppercase; }

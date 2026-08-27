@@ -14,7 +14,7 @@ Type a prompt that names a place. MapTruth takes the map there, locks the OpenSt
 | **2 · From a picture** | Prompt + a screenshot of the real map | Right shape, wrong streets |
 | **3 · Grounded** | Prompt + a hashed OSM lock, and a ban on drawing geography | AI supplies the art; every line is real |
 
-![The three levels, generated from "A 1970s Swiss travel poster of Kyoto in autumn"](public/example/level-3.jpg)
+![The three levels, all generated from "A 1970s Swiss travel poster of Kyoto in autumn"](public/example/comparison.jpg)
 
 ### Try it in 60 seconds
 
