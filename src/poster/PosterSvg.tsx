@@ -104,7 +104,12 @@ export function PosterSvg({ id, sourceMode = false, backgroundImage, className }
       </defs>
       <rect width="1200" height="1500" fill={sourceMode ? '#ECECE5' : palette.paper} />
       {backgroundImage && !sourceMode ? (
-        <image href={backgroundImage} width="1200" height="1500" preserveAspectRatio="xMidYMid slice" opacity="0.82" />
+        <>
+          <image href={backgroundImage} width="1200" height="1500" preserveAspectRatio="xMidYMid slice" opacity="0.55" />
+          {/* Keep the generated art readable underneath: the locked vectors are
+              the point of route 3, so they must never fight the art layer. */}
+          <rect width="1200" height="1500" fill={palette.paper} opacity="0.34" />
+        </>
       ) : null}
       {spec.preset === 'blueprint' && !sourceMode ? <rect width="1200" height="1500" fill={`url(#grid-${id ?? 'preview'})`} /> : null}
 
