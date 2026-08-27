@@ -1,0 +1,7 @@
+# Tests never ship as deployable Vercel Functions.
+api/**/*.test.ts
+tests
+test-results
+playwright-report
+playwright.config.ts
+vitest.config.ts

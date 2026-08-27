@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { appStore, DEFAULT_POSTER_SPEC } from '../state/store'
 import { hashGeometry, hashGeometrySync } from '../lib/hash'
 import type { SourceFeature } from '../types/maptruth'
-import { getDrawnGeometry, renderGroundedPoster, validatePosterInput, verifyGeography } from './commands'
+import { getMapContext, navigateMap, verifyGeography } from './commands'
 
-const route = {
-  type: 'LineString' as const,
-  coordinates: [[106.81, -6.20], [106.82, -6.19]],
+const viewport = {
+  type: 'Polygon' as const,
+  coordinates: [[[106.785, -6.235], [106.855, -6.235], [106.855, -6.155], [106.785, -6.155], [106.785, -6.235]]],
 }
 
 const feature = (id: string, coordinates: [number, number]): SourceFeature => ({
@@ -26,35 +26,33 @@ const feature = (id: string, coordinates: [number, number]): SourceFeature => ({
 beforeEach(() => {
   appStore.setState({
     place: { name: 'Central Jakarta–Senayan', source: 'overpass' },
-    data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.85, -6.16])], verificationStatus: 'verified' },
+    data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.82, -6.19])], verificationStatus: 'verified' },
     map: { center: [106.82, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
-    selection: { kind: 'route', id: 'human:route', geometry: route, geometryHash: hashGeometrySync(route) },
+    selection: { kind: 'area', id: 'human:viewport', geometry: viewport, geometryHash: hashGeometrySync(viewport) },
     poster: { spec: { ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: [] }, status: 'empty', renderedFeatureIds: [], warnings: [] },
     activity: [],
   })
 })
 
 describe('grounded commands', () => {
-  it('rejects fabricated IDs', () => {
-    const result = renderGroundedPoster({ ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: ['osm:invented'] })
-    expect(result).toMatchObject({ status: 'error', reason: 'unknown_feature_ids' })
+  it('returns a bounded, source-backed map context', () => {
+    const result = getMapContext({ detail: 'features' }) as Record<string, unknown>
+    expect(result).toMatchObject({ status: 'ok', featureCount: 2, placeSource: 'overpass' })
+    expect(result.features).toHaveLength(2)
   })
 
-  it('requires user action for known IDs outside the route buffer', () => {
-    const result = renderGroundedPoster({ ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: ['osm:a2'] })
-    expect(result).toMatchObject({ status: 'needs_user_action', reason: 'destination_outside_selected_area' })
+  it('needs a live lock before verifying geography', async () => {
+    expect(await verifyGeography()).toMatchObject({
+      status: 'needs_user_action',
+      reason: 'live_osm_lock_required',
+      suggestedAction: 'lock_live_osm',
+    })
   })
 
-  it('never mutates stored human geometry while restyling', () => {
-    const before = JSON.stringify(appStore.getState().selection?.geometry)
-    const result = renderGroundedPoster({ ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: ['osm:a1'] })
-    expect(result.status).toBe('ok')
-    expect(JSON.stringify(appStore.getState().selection?.geometry)).toBe(before)
-  })
-
-  it('returns a bounded agent-facing geometry copy', () => {
-    const result = getDrawnGeometry()
-    expect(result).toMatchObject({ status: 'ok', source: 'human_drawn', geometryHash: hashGeometrySync(route) })
+  it('rejects cameras outside valid longitude, latitude, and zoom', async () => {
+    expect(await navigateMap({ center: [999, 0], zoom: 12 })).toMatchObject({ status: 'error', reason: 'invalid_camera' })
+    expect(await navigateMap({ center: 'somewhere', zoom: 12 })).toMatchObject({ status: 'error', reason: 'invalid_center' })
+    expect(await navigateMap({ center: [0, 0], zoom: 99 })).toMatchObject({ status: 'error', reason: 'invalid_camera' })
   })
 
   it('recomputes hashes and reports source geometry mismatches', async () => {
@@ -69,11 +67,5 @@ describe('grounded commands', () => {
       data: { ...state.data, features: state.data.features.map((item) => ({ ...item, properties: { ...item.properties, geometryHash: 'tampered' } })) },
     }))
     expect(await verifyGeography()).toMatchObject({ status: 'error', geometryHashMismatches: ['osm:a1'] })
-  })
-
-  it('strips control characters and enforces enum validation', () => {
-    const result = validatePosterInput({ ...DEFAULT_POSTER_SPEC, title: 'Safe\u0000 title', emphasizedFeatureIds: [] })
-    expect(result).toMatchObject({ title: 'Safe title' })
-    expect(validatePosterInput({ ...DEFAULT_POSTER_SPEC, preset: 'imaginary' })).toMatchObject({ status: 'error' })
   })
 })

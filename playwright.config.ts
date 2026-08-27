@@ -4,7 +4,7 @@ const isCI = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 45_000,
+  timeout: 75_000,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',

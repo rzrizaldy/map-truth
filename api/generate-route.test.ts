@@ -1,6 +1,6 @@
 import { generateImage } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import handler from './generate-route'
+import { GET, POST as handler } from './generate-route'
 
 vi.mock('ai', () => ({
   generateImage: vi.fn(),
@@ -15,6 +15,12 @@ beforeEach(() => {
 const request = (body: unknown) => new Request('http://localhost/api/generate-route', { method: 'POST', body: JSON.stringify(body) })
 
 describe('independent gpt-image-2 route endpoint', () => {
+  it('exposes a web-standard POST handler, not a Node default export', async () => {
+    const response = await handler(request({ route: 'promptOnly', prompt: 'Editorial map poster' }))
+    expect(response).toBeInstanceOf(Response)
+    expect(GET().status).toBe(405)
+  })
+
   it('runs prompt-only without requiring a screenshot', async () => {
     const response = await handler(request({ route: 'promptOnly', prompt: 'Editorial map poster' }))
     expect(response.status).toBe(200)

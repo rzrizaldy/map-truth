@@ -11,8 +11,9 @@ export function SiteShell({ children, headerCode = 'WEBMCP' }: SiteShellProps) {
       <header className="site-header">
         <a className="wordmark" href="/" aria-label="MapTruth home"><span>MAP</span>TRUTH</a>
         <nav>
-          <a href="/demo">Demo</a>
-          <a href="/about">About</a>
+          <a href="#studio">01 Lock</a>
+          <a href="#comparison">02 Compare</a>
+          <a href="#verify">03 Verify</a>
         </nav>
         <span className="header-code">{headerCode}</span>
       </header>
@@ -30,7 +31,7 @@ export function SiteShell({ children, headerCode = 'WEBMCP' }: SiteShellProps) {
   )
 }
 
-export function HeroMap() {
+export function FabricatedMap() {
   return (
     <svg viewBox="0 0 440 360" role="img" aria-label="Illustrative fabricated map poster demonstrating invented geography">
       <rect width="440" height="360" fill="#D43D28" />

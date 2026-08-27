@@ -14,3 +14,11 @@ export const hashGeometrySync = (value: unknown): string => {
   return `fnv1a:${(hash >>> 0).toString(16).padStart(8, '0')}`
 }
 
+
+// Live tile features are hashed synchronously (`fnv1a:` prefix); Overpass
+// features are hashed with SHA-256 server-side. Re-verify with whichever
+// function produced the stored hash instead of assuming one of them.
+export const geometryHashMatches = async (geometry: unknown, storedHash: string): Promise<boolean> =>
+  storedHash.startsWith('fnv1a:')
+    ? hashGeometrySync(geometry) === storedHash
+    : (await hashGeometry(geometry)) === storedHash

@@ -4,7 +4,7 @@ import {
   imageGenerationError,
   isImageRoute,
   validSourceImageDataUrl,
-} from './image-generation.js'
+} from './_lib/image-generation.js'
 
 export const config = { maxDuration: 300 }
 
@@ -20,8 +20,9 @@ const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
   headers: { 'Cache-Control': 'no-store', ...init.headers },
 })
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, { status: 405 })
+// Vercel treats a default export as the Node `(req, res)` signature and ignores
+// any returned Response. Named HTTP method exports keep the Web handler shape.
+export async function POST(request: Request): Promise<Response> {
   let body: RouteRequest
   try {
     body = (await request.json()) as RouteRequest
@@ -49,4 +50,8 @@ export default async function handler(request: Request): Promise<Response> {
     const detail = imageGenerationError(error)
     return json({ error: detail === 'moderation_blocked' ? 'moderation_blocked' : 'image_generation_failed', detail }, { status: detail === 'moderation_blocked' ? 400 : 502 })
   }
+}
+
+export function GET(): Response {
+  return json({ error: 'method_not_allowed' }, { status: 405 })
 }

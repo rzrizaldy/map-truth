@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
-import { MaplibreTerradrawControl } from '@watergis/maplibre-gl-terradraw'
-import type { Feature, LineString, Polygon } from 'geojson'
 import { bboxToPolygon, formatPlaceLabel, liveBboxSpanOk } from './boundary'
-import { demoRoute, featuresInContext } from './context'
-import { JAKARTA_CENTER, JAKARTA_ZOOM, OPENFREEMAP_STYLE } from './constants'
+import { featuresInContext } from './context'
+import { OPENFREEMAP_STYLE } from './constants'
 import { createLiveLock, liveLockCacheKey, normalizeViewportFeatures, type ViewportCandidate } from './liveOsm'
 import { readCachedLock, writeCachedLock } from './lockCache'
 import { registerMapRuntime } from './runtime'
@@ -13,22 +11,6 @@ import { hashGeometrySync } from '../lib/hash'
 import { addActivity, appStore, useAppStore } from '../state/store'
 import { captureUndo } from '../state/history'
 import type { SourceFeature, ToolResult } from '../types/maptruth'
-
-type MapStudioProps = { mode: 'about' | 'demo' }
-
-const setSelection = (feature: Feature<LineString | Polygon>) => {
-  captureUndo('drawn geometry')
-  const geometry = feature.geometry
-  const kind = geometry.type === 'LineString' ? 'route' : 'area'
-  const id = `human:${kind}`
-  appStore.setState((state) => ({
-    selection: { kind, id, geometry, geometryHash: hashGeometrySync(geometry) } as typeof state.selection,
-    poster: { ...state.poster, status: state.data.features.length ? 'ready' : 'empty' },
-  }))
-  addActivity('draw_geometry', 'ok', kind === 'route' ? 'Human route became the active 350 m context' : 'Human polygon became the active context', {
-    source: 'manual', reversible: true,
-  })
-}
 
 const featureCollection = (features: SourceFeature[]) => ({ type: 'FeatureCollection' as const, features })
 
@@ -124,7 +106,7 @@ const captureMapScreenshot = (map: MapLibreMap) => {
   return screenshot.toDataURL('image/jpeg', 0.82)
 }
 
-export function MapStudio({ mode }: MapStudioProps) {
+export function MapStudio() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const features = useAppStore((state) => state.data.features)
@@ -136,8 +118,8 @@ export function MapStudio({ mode }: MapStudioProps) {
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: OPENFREEMAP_STYLE,
-      center: mode === 'about' ? JAKARTA_CENTER : initial.center,
-      zoom: mode === 'about' ? JAKARTA_ZOOM : initial.zoom,
+      center: initial.center,
+      zoom: initial.zoom,
       minZoom: 2,
       maxZoom: 18,
       canvasContextAttributes: { preserveDrawingBuffer: true },
@@ -146,6 +128,18 @@ export function MapStudio({ mode }: MapStudioProps) {
     mapRef.current = map
     const mapElement = containerRef.current
     let invalidateOnMoveEnd = false
+
+    // `moveend` fires before the new viewport's tiles are requested, so an agent
+    // that locks immediately would see an empty source. Wait for a fresh `idle`.
+    const settleTiles = (timeoutMs = 12_000) => new Promise<void>((resolve) => {
+      const finish = () => {
+        window.clearTimeout(timer)
+        map.off('idle', finish)
+        resolve()
+      }
+      const timer = window.setTimeout(finish, timeoutMs)
+      map.on('idle', finish)
+    })
 
     const lockLiveOsm = async (source: 'manual' | 'webmcp' = 'manual'): Promise<ToolResult> => {
       const startedAt = performance.now()
@@ -163,7 +157,13 @@ export function MapStudio({ mode }: MapStudioProps) {
       appStore.setState((state) => ({ data: { ...state.data, status: 'loading', error: undefined } }))
       const cacheKey = liveLockCacheKey(bbox, zoom)
       const cached = await readCachedLock(cacheKey)
-      const normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map))
+      let normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map))
+      if (!normalized.length && !map.areTilesLoaded()) {
+        // Tiles for this viewport are still arriving. Give them one settle pass
+        // before telling the caller there is nothing here.
+        await settleTiles()
+        normalized = normalizeViewportFeatures(candidatesFromMap(map))
+      }
       if (!normalized.length) {
         appStore.setState((state) => ({ data: { ...state.data, status: 'error', error: 'No supported OSM features are loaded. Zoom closer or move the map.' } }))
         addActivity('lock_live_osm', 'error', 'No supported OSM features were available in the loaded tiles', { source, durationMs: Math.round(performance.now() - startedAt) })
@@ -197,6 +197,7 @@ export function MapStudio({ mode }: MapStudioProps) {
         invalidateOnMoveEnd = true
         map.easeTo({ center, zoom, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650 })
         await new Promise<void>((resolve) => map.once('moveend', () => resolve()))
+        await settleTiles()
       },
     })
 
@@ -212,30 +213,23 @@ export function MapStudio({ mode }: MapStudioProps) {
     map.on('load', () => {
       addLockOverlay(map)
       resize()
-      if (mode === 'about') {
-        const draw = new MaplibreTerradrawControl({
-          modes: ['linestring', 'polygon', 'select', 'delete-selection', 'delete'],
-          open: true,
-          showDeleteConfirmation: false,
-        })
-        map.addControl(draw, 'top-left')
-        const terra = draw.getTerraDrawInstance()
-        const sync = () => {
-          const latest = terra?.getSnapshot().filter((item) => item.geometry.type === 'LineString' || item.geometry.type === 'Polygon').at(-1)
-          if (latest) setSelection(latest as Feature<LineString | Polygon>)
-        }
-        terra?.on('finish', sync)
-        terra?.on('change', sync)
-      }
-      map.once('idle', async () => {
+      // A stalled tile request must not leave the studio permanently disabled:
+      // fall back to ready once the style itself has rendered.
+      let announcedReady = false
+      const announceReady = (viaTimeout: boolean) => {
+        if (announcedReady) return
+        announcedReady = true
+        window.clearTimeout(readyTimer)
+        map.off('idle', onIdle)
         mapElement.dataset.mapLoaded = 'true'
         appStore.setState((state) => ({ ui: { ...state.ui, mapReady: true } }))
-        addActivity('map_ready', 'ok', 'Live OpenStreetMap vector sources are ready', { source: 'system' })
-        if (mode === 'about') {
-          const result = await lockLiveOsm()
-          if (result.status === 'ok') setSelection({ type: 'Feature', properties: { source: 'maptruth-demo' }, geometry: demoRoute })
-        }
-      })
+        addActivity('map_ready', 'ok', viaTimeout
+          ? 'Map is interactive; some OSM tiles are still arriving'
+          : 'Live OpenStreetMap vector sources are ready', { source: 'system' })
+      }
+      const onIdle = () => announceReady(false)
+      const readyTimer = window.setTimeout(() => announceReady(true), 10_000)
+      map.on('idle', onIdle)
     })
 
     map.on('movestart', (event) => {
@@ -268,7 +262,7 @@ export function MapStudio({ mode }: MapStudioProps) {
       mapRef.current = null
       appStore.setState((state) => ({ ui: { ...state.ui, mapReady: false } }))
     }
-  }, [mode])
+  }, [])
 
   useEffect(() => {
     const map = mapRef.current
@@ -288,15 +282,14 @@ export function MapStudio({ mode }: MapStudioProps) {
   }, [selectedReceipt])
 
   const data = useAppStore((state) => state.data)
-  const selection = useAppStore((state) => state.selection)
   const metaLabel = data.lock?.kind === 'verified' ? 'OSM VERIFIED' : data.lock ? 'LIVE OSM LOCK' : 'LIVE VECTOR VIEWPORT'
 
   return (
-    <div className={`map-shell ${mode === 'demo' ? 'map-shell--demo' : ''}`}>
+    <div className="map-shell map-shell--demo">
       <div className="map-meta">
         <span>{metaLabel}</span>
         <strong>{data.features.length ? `${data.features.length.toLocaleString()} features` : 'Pan · zoom · lock'}</strong>
-        <span>{selection?.kind === 'route' ? '350 m route context' : data.lock ? data.lock.geometryHash.slice(0, 15) : 'no lock yet'}</span>
+        <span>{data.lock ? data.lock.geometryHash.slice(0, 15) : 'no lock yet'}</span>
       </div>
       <div ref={containerRef} className="map-canvas" aria-label="Interactive worldwide OpenStreetMap vector map" />
       <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">

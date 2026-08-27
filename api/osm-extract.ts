@@ -1,7 +1,7 @@
 import { bboxSpanOk, formatPlaceLabel } from '../src/map/boundary.js'
 import { normalizeOverpassElements, type OverpassElement } from '../src/osm/normalize.js'
 
-export const config = { maxDuration: 30 }
+export const config = { maxDuration: 60 }
 
 type ExtractRequest = { bbox?: unknown }
 
@@ -27,9 +27,9 @@ const overpassQuery = (south: number, west: number, north: number, east: number)
 out geom;
 `.trim()
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, { status: 405 })
-
+// Vercel treats a default export as the Node `(req, res)` signature and ignores
+// any returned Response. Named HTTP method exports keep the Web handler shape.
+export async function POST(request: Request): Promise<Response> {
   let body: ExtractRequest
   try {
     body = (await request.json()) as ExtractRequest
@@ -87,4 +87,8 @@ export default async function handler(request: Request): Promise<Response> {
     const detail = error instanceof Error ? error.message : 'overpass_request_failed'
     return json({ error: 'overpass_failed', detail }, { status: 502 })
   }
+}
+
+export function GET(): Response {
+  return json({ error: 'method_not_allowed' }, { status: 405 })
 }

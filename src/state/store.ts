@@ -1,7 +1,7 @@
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 import type { ActivityEntry, MapTruthState } from '../types/maptruth'
-import { JAKARTA_BBOX, JAKARTA_CENTER, JAKARTA_ZOOM, NYC_CENTER, NYC_ZOOM } from '../map/constants'
+import { NYC_CENTER, NYC_ZOOM } from '../map/constants'
 
 export const DEFAULT_POSTER_SPEC = {
   title: 'Map without invention',
@@ -11,12 +11,6 @@ export const DEFAULT_POSTER_SPEC = {
   emphasizedFeatureIds: [] as string[],
   labelDensity: 'balanced' as const,
   showLegend: true,
-}
-
-export const JAKARTA_POSTER_SPEC = {
-  ...DEFAULT_POSTER_SPEC,
-  title: 'Jakarta, without invention',
-  emphasizedFeatureIds: [],
 }
 
 const emptyRoutes = () => ({
@@ -57,22 +51,8 @@ const baseState = (): MapTruthState => ({
 
 export const appStore = createStore<MapTruthState>(baseState)
 
-export const resetDemoState = () => {
+export const resetStudioState = () => {
   appStore.setState(baseState())
-}
-
-export const resetAboutState = () => {
-  appStore.setState({
-    ...baseState(),
-    place: { name: 'Central Jakarta–Senayan', source: 'none' },
-    map: { center: JAKARTA_CENTER, zoom: JAKARTA_ZOOM, bbox: JAKARTA_BBOX },
-    poster: { spec: JAKARTA_POSTER_SPEC, status: 'empty', renderedFeatureIds: [], warnings: [] },
-    ai: {
-      prompt:
-        'Create a bold Jakarta public-information poster in black, cream, and dispatch red. Emphasize the route and key civic landmarks. Keep labels minimal.',
-      routes: emptyRoutes(),
-    },
-  })
 }
 
 export const useAppStore = <T>(selector: (state: MapTruthState) => T): T =>
