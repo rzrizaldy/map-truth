@@ -30,7 +30,7 @@ describe('independent gpt-image-2 route endpoint', () => {
 
   it('validates route-specific evidence', async () => {
     expect((await handler(request({ route: 'screenshotGrounded', prompt: 'Poster' }))).status).toBe(400)
-    expect((await handler(request({ route: 'mapTruthGrounded', prompt: 'Poster', sourceImageDataUrl: 'data:image/png;base64,aA==' }))).status).toBe(400)
+    expect((await handler(request({ route: 'mapTruthGrounded', prompt: 'Poster' }))).status).toBe(400)
     expect((await handler(request({ route: 'invented', prompt: 'Poster' }))).status).toBe(400)
     expect(generateImage).not.toHaveBeenCalled()
   })
@@ -43,14 +43,17 @@ describe('independent gpt-image-2 route endpoint', () => {
     expect(generateImage).toHaveBeenCalledTimes(1)
   })
 
-  it('uses the screenshot only as art context for MapTruth-grounded output', async () => {
+  it('tells the model to follow the real map it was given', async () => {
     const response = await handler(request({
-      route: 'mapTruthGrounded', prompt: 'Civic print', sourceImageDataUrl: 'data:image/png;base64,aA==', mapSummary: '{"lock":"live"}',
+      route: 'screenshotGrounded', prompt: 'Civic print', sourceImageDataUrl: 'data:image/png;base64,aA==', mapSummary: '{"lock":"live"}',
     }))
     expect(response.status).toBe(200)
     const options = vi.mocked(generateImage).mock.calls[0][0]
     const prompt = options.prompt as { text: string; images: string[] }
-    expect(prompt.text).toContain('Do not draw roads, rivers, routes, boundaries, maps, labels')
+    expect(prompt.text).toContain('real OpenStreetMap view')
+    expect(prompt.text).toContain('Do not invent streets')
+    // Markers drawn on the live map must survive into the poster.
+    expect(prompt.text).toContain('keep every marker exactly where it sits')
     expect(prompt.images).toHaveLength(1)
     expect(options.size).toBe('1024x1536')
   })

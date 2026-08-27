@@ -42,7 +42,6 @@ export const verifyOsmExtract = async (bbox: [number, number, number, number]) =
     appStore.setState((state) => ({
       data: { status: 'ready', features: payload.features!, lock: verifiedLock, verificationStatus: 'verified' },
       place: { name: payload.place ?? state.place.name, source: 'overpass' },
-      poster: { ...state.poster, status: 'ready', renderedFeatureIds, warnings: [] },
     }))
     const durationMs = Math.round(performance.now() - startedAt)
     addActivity('verify_osm_lock', 'ok', `${payload.features.length.toLocaleString()} canonical OSM features verified`, {

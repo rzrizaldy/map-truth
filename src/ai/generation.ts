@@ -3,13 +3,12 @@ import { addActivity, appStore } from '../state/store'
 import { captureUndo } from '../state/history'
 import type { ComparisonRoute, ToolResult } from '../types/maptruth'
 
-const ROUTES: ComparisonRoute[] = ['promptOnly', 'screenshotGrounded', 'mapTruthGrounded']
+const ROUTES: ComparisonRoute[] = ['promptOnly', 'screenshotGrounded']
 const controllers = new Map<ComparisonRoute, AbortController>()
 
 const routeLabel: Record<ComparisonRoute, string> = {
-  promptOnly: 'Prompt only',
-  screenshotGrounded: 'Map screenshot',
-  mapTruthGrounded: 'MapTruth grounded',
+  promptOnly: 'Without a map',
+  screenshotGrounded: 'Grounded on the real map',
 }
 
 const compactMapSummary = () => {
@@ -37,8 +36,8 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
   const state = appStore.getState()
   const runtime = getMapRuntime()
   if (!runtime) return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
-  if (route === 'mapTruthGrounded' && (!state.data.lock || !state.data.features.length)) {
-    addActivity('generate_comparison', 'needs_user_action', 'Route 03 needs a live OSM lock', { source })
+  if (route === 'screenshotGrounded' && !state.data.lock) {
+    addActivity('generate_comparison', 'needs_user_action', 'The grounded image needs a locked map', { source })
     return { status: 'needs_user_action', reason: 'live_osm_lock_required', suggestedAction: 'lock_live_osm' }
   }
 
@@ -67,7 +66,7 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
         route,
         prompt: appStore.getState().ai.prompt,
         sourceImageDataUrl: screenshot,
-        mapSummary: route === 'mapTruthGrounded' ? compactMapSummary() : undefined,
+        mapSummary: route === 'screenshotGrounded' ? compactMapSummary() : undefined,
       }),
     })
     const responseText = await response.text()
@@ -81,7 +80,7 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
     const durationMs = Date.now() - startedAt
     setRoute(route, { status: 'ready', imageDataUrl: payload.image, error: undefined, durationMs })
     addActivity('generate_comparison', 'ok', `${routeLabel[route]} image completed`, {
-      source, durationMs, afterHash: route === 'mapTruthGrounded' ? appStore.getState().data.lock?.geometryHash : undefined, reversible: true,
+      source, durationMs, afterHash: route === 'screenshotGrounded' ? appStore.getState().data.lock?.geometryHash : undefined, reversible: true,
     })
     return { status: 'ready', route, durationMs, model: 'openai/gpt-image-2' }
   } catch (error) {
@@ -101,8 +100,7 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
 
 export const generateComparisonManually = async (): Promise<ToolResult> => {
   const state = appStore.getState()
-  const routes: ComparisonRoute[] = ['promptOnly', 'screenshotGrounded']
-  if (state.data.lock) routes.push('mapTruthGrounded')
+  const routes: ComparisonRoute[] = state.data.lock ? ['promptOnly', 'screenshotGrounded'] : ['promptOnly']
   appStore.setState((current) => ({
     ai: {
       ...current.ai,
@@ -110,7 +108,7 @@ export const generateComparisonManually = async (): Promise<ToolResult> => {
     },
   }))
   void Promise.allSettled(routes.map((route) => runGenerationRoute(route, 'manual')))
-  return { status: 'ok', startedRoutes: routes, route03RequiresLock: !state.data.lock }
+  return { status: 'ok', startedRoutes: routes, groundedRouteRequiresLock: !state.data.lock }
 }
 
 export const stageComparisonForApproval = (input: { routes?: unknown; prompt?: unknown }): ToolResult => {
@@ -133,7 +131,7 @@ export const stageComparisonForApproval = (input: { routes?: unknown; prompt?: u
     if (!prompt) return { status: 'error', reason: 'invalid_prompt' }
     appStore.setState((state) => ({ ai: { ...state.ai, prompt } }))
   }
-  const blockedRoutes = routes.includes('mapTruthGrounded') && !appStore.getState().data.lock ? ['mapTruthGrounded'] as ComparisonRoute[] : []
+  const blockedRoutes = routes.includes('screenshotGrounded') && !appStore.getState().data.lock ? ['screenshotGrounded'] as ComparisonRoute[] : []
   const runnableRoutes = routes.filter((route) => !blockedRoutes.includes(route))
   if (!runnableRoutes.length) return { status: 'needs_user_action', reason: 'live_osm_lock_required', suggestedAction: 'lock_live_osm' }
   appStore.setState((state) => ({

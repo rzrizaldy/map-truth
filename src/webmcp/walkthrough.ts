@@ -36,13 +36,13 @@ export const walkthroughSteps = (place: string): WalkthroughStep[] => [
   },
   {
     tool: 'verify_geography',
-    detail: 'Re-hash every drawn shape against its source',
+    detail: 'Re-hash every locked shape against its source',
     run: () => verifyGeography(),
   },
   {
     tool: 'generate_comparison',
     detail: 'Stage the images — and stop for human approval',
-    run: () => stageComparisonForApproval({ routes: ['promptOnly', 'screenshotGrounded', 'mapTruthGrounded'] }),
+    run: () => stageComparisonForApproval({ routes: ['promptOnly', 'screenshotGrounded'] }),
   },
 ]
 

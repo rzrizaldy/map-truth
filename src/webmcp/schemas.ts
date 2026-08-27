@@ -52,9 +52,9 @@ export const GENERATE_COMPARISON_SCHEMA = {
     prompt: { type: 'string', minLength: 1, maxLength: 1200 },
     routes: {
       type: 'array',
-      items: { type: 'string', enum: ['promptOnly', 'screenshotGrounded', 'mapTruthGrounded'] },
+      items: { type: 'string', enum: ['promptOnly', 'screenshotGrounded'] },
       minItems: 1,
-      maxItems: 3,
+      maxItems: 2,
       uniqueItems: true,
     },
   },
@@ -74,8 +74,7 @@ export const FOCUS_PLACE_SCHEMA = {
 export const EXPORT_ARTWORK_SCHEMA = {
   type: 'object',
   properties: {
-    format: { type: 'string', enum: ['png', 'svg'] },
+    route: { type: 'string', enum: ['promptOnly', 'screenshotGrounded'] },
   },
-  required: ['format'],
   additionalProperties: false,
 } as const

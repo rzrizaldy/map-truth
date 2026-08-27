@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Lightbox } from './Lightbox'
+import { exportGroundedArtwork } from '../webmcp/commands'
 import { approvePendingComparison, cancelGeneration, runGenerationRoute } from '../ai/generation'
-import { PosterSvg } from '../poster/PosterSvg'
 import { appStore, useAppStore } from '../state/store'
 import type { ComparisonRoute, GenerationRouteState } from '../types/maptruth'
 
@@ -11,13 +11,11 @@ export const EXAMPLE_PROMPT = 'A 1970s Swiss travel poster of Kyoto in autumn'
 const exampleImage: Record<ComparisonRoute, string> = {
   promptOnly: '/example/level-1.jpg',
   screenshotGrounded: '/example/level-2.jpg',
-  mapTruthGrounded: '/example/level-3.jpg',
 }
 
 const routeCopy: Record<ComparisonRoute, { number: string; title: string; description: string; risk: string; riskClass: string }> = {
-  promptOnly: { number: 'FIRST', title: 'Made up', description: 'The AI never saw a map. It invents the streets.', risk: 'Not a real place', riskClass: 'high' },
-  screenshotGrounded: { number: 'SECOND', title: 'From a picture', description: 'The AI saw a screenshot and copied it by eye. Streets shift.', risk: 'Roughly right', riskClass: 'medium' },
-  mapTruthGrounded: { number: 'THIRD', title: 'Grounded in the real map', description: 'The AI only made the artwork. The streets are the real ones.', risk: 'Real streets', riskClass: 'locked' },
+  promptOnly: { number: 'WITHOUT', title: 'No map', description: 'The AI never saw one. It invents a city that does not exist.', risk: 'Not a real place', riskClass: 'high' },
+  screenshotGrounded: { number: 'WITH', title: 'Grounded by WebMCP', description: 'The agent found the place, locked it, and handed over the real map.', risk: 'Real place', riskClass: 'locked' },
 }
 
 function RouteProgress({ route, state }: { route: ComparisonRoute; state: GenerationRouteState }) {
@@ -39,12 +37,10 @@ function RouteProgress({ route, state }: { route: ComparisonRoute; state: Genera
   )
 }
 
-function ResultVisual({ route, state, locked }: { route: ComparisonRoute; state: GenerationRouteState; locked: boolean }) {
+function ResultVisual({ route, state }: { route: ComparisonRoute; state: GenerationRouteState }) {
   if (state.status === 'generating' || state.status === 'queued' || state.status === 'awaiting_approval') return <RouteProgress key={state.status} route={route} state={state} />
   if (state.status === 'ready' && state.imageDataUrl) {
-    return route === 'mapTruthGrounded'
-      ? <PosterSvg backgroundImage={state.imageDataUrl} />
-      : <img src={state.imageDataUrl} alt={`${routeCopy[route].title} GPT Image result`} />
+    return <img src={state.imageDataUrl} alt={`${routeCopy[route].title} GPT Image result`} />
   }
   if (state.status === 'error' || state.status === 'cancelled') {
     return (
@@ -55,9 +51,6 @@ function ResultVisual({ route, state, locked }: { route: ComparisonRoute; state:
       </div>
     )
   }
-  // Once a place is locked, the grounded card previews the real streets it
-  // will use — that preview is more informative than an example.
-  if (route === 'mapTruthGrounded' && locked) return <PosterSvg />
   return (
     <div className="taste-example">
       <img src={exampleImage[route]} alt={`Example ${routeCopy[route].title.toLowerCase()} result for ${EXAMPLE_PROMPT}`} loading="lazy" />
@@ -98,25 +91,28 @@ export function ComparisonGrid() {
           const copy = routeCopy[route]
           const state = ai.routes[route]
           return (
-            <article className={`taste-card ${route === 'mapTruthGrounded' ? 'taste-card--truth' : ''}`} key={route}>
+            <article className={`taste-card ${route === 'screenshotGrounded' ? 'taste-card--truth' : ''}`} key={route}>
               <div className="taste-number">{copy.number}</div>
               <h3>{copy.title}</h3>
-              <p>{route === 'mapTruthGrounded' && locked ? `Real streets of ${placeName}, styled by AI.` : copy.description}</p>
+              <p>{route === 'screenshotGrounded' && locked ? `Grounded on the real map of ${placeName}.` : copy.description}</p>
               <button
                 type="button"
                 className="taste-visual taste-visual--zoom"
                 onClick={() => setZoomed(route)}
                 aria-label={`View ${copy.title} full screen`}
               >
-                <ResultVisual route={route} state={state} locked={locked} />
+                <ResultVisual route={route} state={state} />
                 <span className="taste-zoom-hint" aria-hidden="true">⤢</span>
               </button>
               <div className="card-status-row">
                 <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>
                 {state.durationMs ? <span className="route-duration">{(state.durationMs / 1000).toFixed(0)}s</span> : null}
               </div>
-              {route === 'mapTruthGrounded' && locked && state.status === 'idle' ? (
+              {locked && state.status === 'idle' ? (
                 <button className="route-action" type="button" onClick={() => void runGenerationRoute(route)}>Make this one</button>
+              ) : null}
+              {state.status === 'ready' ? (
+                <button className="route-action" type="button" onClick={() => void exportGroundedArtwork({ route })}>Download</button>
               ) : null}
             </article>
           )
@@ -130,7 +126,7 @@ export function ComparisonGrid() {
           caption={ai.routes[zoomed].status === 'ready' ? undefined : `Example · "${EXAMPLE_PROMPT}"`}
           onClose={() => setZoomed(null)}
         >
-          <ResultVisual route={zoomed} state={ai.routes[zoomed]} locked={locked} />
+          <ResultVisual route={zoomed} state={ai.routes[zoomed]} />
         </Lightbox>
       ) : null}
     </section>

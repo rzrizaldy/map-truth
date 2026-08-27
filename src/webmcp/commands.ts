@@ -3,7 +3,7 @@ import { featuresInContext } from '../map/context'
 import { getMapRuntime } from '../map/runtime'
 import { geocodePlace } from '../map/geocode'
 import { geometryHashMatches } from '../lib/hash'
-import { exportArtwork } from '../poster/export'
+import { exportRouteImage } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
 import { captureUndo } from '../state/history'
 import { inspectComparison, stageComparisonForApproval } from '../ai/generation'
@@ -53,7 +53,7 @@ export const getMapContext = (input: { detail?: 'summary' | 'features' } = {}): 
 
 export const verifyGeography = async (): Promise<ToolResult> => {
   const state = appStore.getState()
-  if (state.poster.status !== 'ready') {
+  if (!state.data.lock || !state.data.features.length) {
     addActivity('verify_geography', 'needs_user_action', 'Lock a live OSM viewport first')
     return {
       status: 'needs_user_action',
@@ -61,48 +61,42 @@ export const verifyGeography = async (): Promise<ToolResult> => {
       suggestedAction: 'lock_live_osm',
     }
   }
-  const sourceIds = new Set(state.data.features.map((feature) => feature.properties.id))
-  const unknownFeatureIds = state.poster.renderedFeatureIds.filter((id) => !sourceIds.has(id))
-  const renderedIds = new Set(state.poster.renderedFeatureIds)
-  const renderedFeatures = state.data.features.filter((feature) => renderedIds.has(feature.properties.id))
+
+  // The screenshot handed to the model is only as trustworthy as the geometry
+  // that produced it, so re-hash every locked shape against its source.
   const recomputed = await Promise.all(
-    renderedFeatures.map(async (feature) => ({
+    state.data.features.map(async (feature) => ({
       id: feature.properties.id,
       matches: await geometryHashMatches(feature.geometry, feature.properties.geometryHash),
     })),
   )
   const geometryHashMismatches = recomputed.filter((result) => !result.matches).map((result) => result.id)
-  const mismatches = [...unknownFeatureIds, ...geometryHashMismatches]
-  captureUndo('geography comparison mode')
-  appStore.setState((current) => ({
-    ui: { ...current.ui, comparisonMode: 'overlay', seam: 50 },
-  }))
-  addActivity('verify_geography', mismatches.length ? 'error' : 'ok',
-    mismatches.length ? 'Geographic provenance mismatch detected' : 'Every geographic layer is source-backed')
+
+  addActivity('verify_geography', geometryHashMismatches.length ? 'error' : 'ok',
+    geometryHashMismatches.length
+      ? 'Geographic provenance mismatch detected'
+      : `${state.data.features.length.toLocaleString()} locked shapes match their source`)
+
   return {
-    status: mismatches.length ? 'error' : 'verified',
-    allGeographicFeaturesSourceBacked: mismatches.length === 0,
-    renderedFeatureCount: state.poster.renderedFeatureIds.length,
-    humanGeometrySourceBacked: Boolean(state.selection),
-    unknownFeatureIds,
+    status: geometryHashMismatches.length ? 'error' : 'verified',
+    allGeographicFeaturesSourceBacked: geometryHashMismatches.length === 0,
+    checkedFeatureCount: state.data.features.length,
     geometryHashMismatches,
-    comparisonMode: 'overlay',
-    lockType: state.data.lock?.kind ?? 'none',
-    lockGeometryHash: state.data.lock?.geometryHash,
+    truthPins: state.truthPins.map((pin) => ({ name: pin.name, center: pin.center })),
+    lockType: state.data.lock.kind,
+    lockGeometryHash: state.data.lock.geometryHash,
   } as ToolResult
 }
 
-export const exportGroundedArtwork = async (input: { format?: unknown }): Promise<ToolResult> => {
-  if (input.format !== 'png' && input.format !== 'svg') {
-    return { status: 'error', reason: 'invalid_export_format' }
-  }
+export const exportGroundedArtwork = async (input: { route?: unknown }): Promise<ToolResult> => {
+  const route = input.route === 'promptOnly' ? 'promptOnly' : 'screenshotGrounded'
   try {
-    const result = await exportArtwork(input.format)
-    addActivity('export_artwork', 'ok', `Prepared ${input.format.toUpperCase()} download`)
+    const result = await exportRouteImage(route)
+    addActivity('export_artwork', 'ok', `Downloaded the ${route === 'promptOnly' ? 'prompt-only' : 'grounded'} image`)
     return { status: 'ready', ...result, attributionIncluded: true }
   } catch (error) {
-    addActivity('export_artwork', 'error', 'Export failed')
-    return { status: 'error', reason: 'export_failed', details: String(error) }
+    addActivity('export_artwork', 'error', 'Nothing generated to download yet')
+    return { status: 'needs_user_action', reason: 'nothing_generated_yet', suggestedAction: 'generate_comparison', details: String(error) }
   }
 }
 

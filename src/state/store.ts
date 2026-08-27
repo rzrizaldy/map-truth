@@ -3,18 +3,9 @@ import { createStore } from 'zustand/vanilla'
 import type { ActivityEntry, MapTruthState } from '../types/maptruth'
 import { NYC_CENTER, NYC_ZOOM } from '../map/constants'
 
-export const DEFAULT_POSTER_SPEC = {
-  preset: 'editorial' as const,
-  palette: 'red-cream-black' as const,
-  emphasizedFeatureIds: [] as string[],
-  labelDensity: 'balanced' as const,
-  showLegend: true,
-}
-
 const emptyRoutes = () => ({
   promptOnly: { status: 'idle' as const },
   screenshotGrounded: { status: 'idle' as const },
-  mapTruthGrounded: { status: 'idle' as const },
 })
 
 const baseState = (): MapTruthState => ({
@@ -25,15 +16,7 @@ const baseState = (): MapTruthState => ({
     zoom: NYC_ZOOM,
     bbox: [-74.02, 40.72, -73.95, 40.78],
   },
-  poster: {
-    spec: DEFAULT_POSTER_SPEC,
-    status: 'empty',
-    renderedFeatureIds: [],
-    warnings: [],
-  },
   ui: {
-    comparisonMode: 'split',
-    seam: 52,
     webmcpAvailable: false,
     webmcpStatus: 'checking',
     mapReady: false,

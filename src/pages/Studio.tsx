@@ -4,9 +4,8 @@ import { PromptStep } from '../components/PromptStep'
 import { SiteShell } from '../components/SiteShell'
 import { AgentReceiptRail, StatusRail } from '../components/StudioPanels'
 import { AgentWalkthrough } from '../components/AgentWalkthrough'
-import { TruthSeam } from '../poster/TruthSeam'
 import { MapStudio } from '../map/MapStudio'
-import { exportGroundedArtwork, lockLiveOsm, verifyOsmLock } from '../webmcp/commands'
+import { lockLiveOsm, verifyOsmLock } from '../webmcp/commands'
 import { registerMapTruthTools } from '../webmcp/register'
 import { appStore, resetStudioState, useAppStore } from '../state/store'
 
@@ -40,8 +39,8 @@ export function StudioPage() {
         <div className="section-kicker">GROUND AI IMAGES IN A REAL MAP</div>
         <h1>AI makes up cities.<br /><em>Give it a real one.</em></h1>
         <p>
-          Ask for a poster of any place. You’ll get the same prompt drawn three ways — made up from
-          nothing, copied from a picture, and locked to the real streets. The difference is obvious.
+          Ask for a poster of any place. You’ll get the same prompt twice — once with the AI guessing,
+          once after an agent found the place and handed it the real map. The difference is obvious.
         </p>
       </section>
 
@@ -51,7 +50,7 @@ export function StudioPage() {
         <div className="step-head">
           <span className="step-num">2</span>
           <h2>Pick the place</h2>
-          <p>Drag the map anywhere, then keep the view. This is the real geography your image gets.</p>
+          <p>Drag the map anywhere, then keep the view. This exact map is what the image model gets.</p>
         </div>
 
         <StatusRail />
@@ -70,21 +69,6 @@ export function StudioPage() {
       <AgentWalkthrough />
 
       <ComparisonGrid />
-
-      {locked ? (
-        <section className="step step--done" id="step-4">
-          <div className="step-head">
-            <span className="step-num">✓</span>
-            <h2>See the proof</h2>
-            <p>Drag the slider. The streets underneath are the real ones — the AI only supplied colour and texture.</p>
-          </div>
-          <TruthSeam />
-          <div className="seam-actions">
-            <button className="button button--small" type="button" onClick={() => void exportGroundedArtwork({ format: 'png' })}>Download PNG</button>
-            <button className="button button--small" type="button" onClick={() => void exportGroundedArtwork({ format: 'svg' })}>Download SVG</button>
-          </div>
-        </section>
-      ) : null}
 
       <details className="details-panel" open={showDetails} onToggle={(event) => setShowDetails(event.currentTarget.open)}>
         <summary>Under the hood</summary>

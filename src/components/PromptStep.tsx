@@ -103,9 +103,9 @@ export function PromptStep() {
             onClick={() => void generateComparisonManually()}
             disabled={!mapReady || anyRunning}
           >
-            {anyRunning ? 'Making 3 images…' : 'Make 3 images'}
+            {anyRunning ? 'Making images…' : 'Make 2 images'}
           </button>
-          <small>{locked ? `Grounded on ${place.name}.` : 'Pick a place below first for the grounded version.'}</small>
+          <small>{locked ? `Grounded on ${place.name}.` : 'Pick a place below so the second one has a real map.'}</small>
         </div>
       </div>
     </section>

@@ -96,10 +96,10 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
       }, { signal: controller.signal }),
       document.modelContext.registerTool({
         name: 'export_artwork', title: 'Export attributed artwork',
-        description: 'Prepare an SVG or 2400 by 3000 PNG with provenance metadata and OpenStreetMap attribution.',
+        description: 'Download a generated image. Defaults to the map-grounded one, which carries OpenStreetMap attribution.',
         inputSchema: EXPORT_ARTWORK_SCHEMA,
         annotations: { readOnlyHint: false, untrustedContentHint: false },
-        execute: (input) => exportGroundedArtwork(input as { format?: unknown }),
+        execute: (input) => exportGroundedArtwork(input as { route?: unknown }),
       }, { signal: controller.signal }),
     ])
     appStore.setState((state) => ({

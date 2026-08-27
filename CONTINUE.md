@@ -4,9 +4,10 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
 ## Shape now
 
-- **One page, three steps.** `StudioPage` renders hero → step 1 prompt → step 2 place → step 3 compare → proof seam. Technical detail sits in an "Under the hood" `<details>`. `/demo` and `/about` redirect to `/`.
+- **One page, three steps, two results.** `StudioPage` renders hero → step 1 prompt → step 2 place → step 3 compare. Technical detail sits in an "Under the hood" `<details>`. `/demo` and `/about` redirect to `/`.
+- **There is no vector poster any more.** An earlier design redrew the whole OSM network over the generated art; it looked worse than the screenshot-grounded result it was meant to beat. The grounded route is now: pin the truth *on the live map*, capture it, and tell the model to follow it. `PosterSvg`, `TruthSeam`, the projection and `canvg` are gone.
 - **The prompt drives the map.** `extractPlaceMentions` turns prompt text into chips; `focusPlace` geocodes, flies, and locks. Without this the demo generated New York for a Jakarta prompt and said nothing.
-- **Google Maps palette.** Light surfaces, grey type, one blue accent (`--blue: #1a73e8`). Tokens live in `src/index.css`; the map overlay and `PosterSvg` follow the same colours.
+- **Google Maps palette.** Light surfaces, grey type, one blue accent (`--blue: #1a73e8`). Tokens live in `src/index.css`; the map overlay and pin layer follow the same colours.
 - Three Vercel Functions: `api/generate-route.ts`, `api/osm-extract.ts`, `api/geocode.ts`. Shared code lives in `api/_lib/`, tests are excluded by `.vercelignore`.
 
 ## Hard-won invariants
@@ -16,7 +17,7 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 - **`navigate_map` must settle tiles before resolving**, or an agent's immediate `lock_live_osm` sees an empty source.
 - **Never truncate the feature set by draw order.** Budget per class and rank by importance, or roads vanish behind parks and whole neighbourhoods render bare.
 - Never label tile-derived fragments as canonical OSM entities. Only a successful Overpass replacement earns `OSM VERIFIED`.
-- Route 3 GPT output is an art layer only: no roads, water, routes, boundaries, labels, place names, landmarks, icons, coordinates, or map silhouettes.
+- The grounded route's evidence is the captured map itself. Pins must be drawn on the live map, never only in the UI, or they never reach the model.
 - Manual mode stays complete when `document.modelContext` is absent.
 - Agent-triggered generation stops at a visible cost approval gate.
 - No fake generated images, no client-side API keys, no bundled city data.
@@ -30,6 +31,7 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 - `api/generate-route.ts`, `api/osm-extract.ts` — validated Web handlers
 - `src/map/places.ts`, `src/components/PromptStep.tsx` — prompt → place chips → focus
 - `api/geocode.ts` — Nominatim forward/reverse with a lockable zoom floor
+- `src/map/truthPins.ts`, `src/map/pinSync.ts` — prompt terms → real OSM coordinates
 - `src/pages/Studio.tsx`, `src/components/ComparisonGrid.tsx` — the three-step journey
 
 ## WebMCP status

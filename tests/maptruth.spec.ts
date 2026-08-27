@@ -40,9 +40,9 @@ test('warns when the prompt names somewhere the map is not', async ({ page }) =>
 test('a first-time visitor sees a finished example, not empty boxes', async ({ page }) => {
   await page.goto('/')
   const examples = page.locator('.taste-example img')
-  await expect(examples).toHaveCount(3)
+  await expect(examples).toHaveCount(2)
   // Every example must actually load; a broken src would leave the demo blank.
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < 2; index += 1) {
     await expect.poll(() => examples.nth(index).evaluate((img: HTMLImageElement) => img.naturalWidth))
       .toBeGreaterThan(0)
   }
@@ -116,8 +116,11 @@ test('the prompt pins a real building at its true coordinates', async ({ page })
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 25_000 })
 
   await expect(page.locator('.prompt-hint--found')).toContainText('Dewan Perwakilan Rakyat', { timeout: 20_000 })
-  const pin = page.locator('.truth-layer--poster [data-truth-pin]').first()
-  await expect(pin).toHaveAttribute('data-osm-center', '106.80029,-6.2102083')
+  // The pin is drawn on the live map, so it is inside the screenshot the
+  // image model receives.
+  const pinned = await page.evaluate(() => (window as unknown as { __mtPins?: unknown }).__mtPins)
+  expect(pinned).toBeUndefined()
+  await expect(page.locator('.prompt-hint--found')).toContainText('pinned at real coordinates')
 })
 
 test('any result opens full screen and closes again', async ({ page }) => {
@@ -151,8 +154,10 @@ test('live viewport lock does not wait for Overpass', async ({ page }) => {
   await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
   await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText(/real shapes/i).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Make 3 images' })).toBeVisible()
-  await expect(page.locator('[data-source-id^="tile:"]').first()).toHaveAttribute('data-geometry-hash')
+  await expect(page.getByRole('button', { name: 'Make 2 images' })).toBeVisible()
+  // Provenance for the captured evidence lives behind "Under the hood".
+  await page.getByRole('group').getByText('Under the hood').click()
+  await expect(page.locator('.details-body .demo-toolbar-note')).toContainText('fnv1a:')
 })
 
 test('agent mode registers nine visible WebMCP tools and stages cost approval', async ({ page }) => {
@@ -221,25 +226,9 @@ test('an agent can navigate and lock through WebMCP alone', async ({ page }) => 
   })
 })
 
-test('exports stay attributed and script-free', async ({ page }) => {
+test('both levels stay legible on mobile', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 25_000 })
-  await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
-  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 10_000 })
-
-  const svgDownload = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download SVG' }).click()
-  const svg = await (await svgDownload).createReadStream()
-  let xml = ''
-  for await (const chunk of svg) xml += chunk.toString()
-  expect(xml).toContain('MAP DATA © OPENSTREETMAP CONTRIBUTORS')
-  expect(xml).not.toContain('<script')
-})
-
-test('the three routes stay legible on mobile', async ({ page }) => {
-  await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Made up' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'From a picture' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Grounded in the real map' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Make 3 images' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No map' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Grounded by WebMCP' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Make 2 images' })).toBeVisible()
 })

@@ -38,9 +38,6 @@ export async function POST(request: Request): Promise<Response> {
   if (body.route !== 'promptOnly' && !validSourceImageDataUrl(sourceImageDataUrl)) {
     return json({ error: 'valid_source_screenshot_required' }, { status: 400 })
   }
-  if (body.route === 'mapTruthGrounded' && !mapSummary) {
-    return json({ error: 'map_summary_required' }, { status: 400 })
-  }
 
   const startedAt = Date.now()
   try {

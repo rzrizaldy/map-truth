@@ -2,8 +2,7 @@ import { getMapRuntime } from '../map/runtime'
 import { addActivity, appStore } from './store'
 import type { MapTruthState } from '../types/maptruth'
 
-type Snapshot = Pick<MapTruthState, 'data' | 'place' | 'map' | 'selection' | 'poster' | 'ai'> & {
-  ui: Pick<MapTruthState['ui'], 'comparisonMode' | 'seam'>
+type Snapshot = Pick<MapTruthState, 'data' | 'place' | 'map' | 'selection' | 'truthPins' | 'ai'> & {
   label: string
 }
 
@@ -17,9 +16,8 @@ export const captureUndo = (label: string) => {
     place: state.place,
     map: state.map,
     selection: state.selection,
-    poster: state.poster,
+    truthPins: state.truthPins,
     ai: state.ai,
-    ui: { comparisonMode: state.ui.comparisonMode, seam: state.ui.seam },
   }))
   if (stack.length > 12) stack.shift()
   appStore.setState((current) => ({ ui: { ...current.ui, canUndo: true } }))
@@ -38,9 +36,9 @@ export const undoLastChange = async () => {
     place: snapshot.place,
     map: snapshot.map,
     selection: snapshot.selection,
-    poster: snapshot.poster,
+    truthPins: snapshot.truthPins,
     ai: snapshot.ai,
-    ui: { ...state.ui, ...snapshot.ui, canUndo: stack.length > 0 },
+    ui: { ...state.ui, canUndo: stack.length > 0 },
   }))
   const runtime = getMapRuntime()
   if (runtime) await runtime.navigate(snapshot.map.center, snapshot.map.zoom)

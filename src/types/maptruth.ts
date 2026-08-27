@@ -3,9 +3,6 @@ import type { TruthPin } from '../map/truthPins'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
 export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
-export type PosterPreset = 'editorial' | 'retro' | 'blueprint'
-export type PosterPalette = 'red-cream-black' | 'blue-white' | 'sunset'
-export type LabelDensity = 'minimal' | 'balanced' | 'detailed'
 
 export type SourceFeatureProperties = {
   id: string
@@ -28,14 +25,6 @@ export type SourceFeatureCollection = FeatureCollection<Geometry, SourceFeatureP
 
 export type FeatureRef = Pick<SourceFeatureProperties, 'id' | 'name' | 'type'>
 
-export type PosterSpec = {
-  preset: PosterPreset
-  palette: PosterPalette
-  emphasizedFeatureIds: string[]
-  labelDensity: LabelDensity
-  showLegend: boolean
-}
-
 // The locked viewport is the only selection MapTruth makes.
 export type HumanSelection = { kind: 'area'; id: string; geometry: Polygon; geometryHash: string }
 
@@ -53,7 +42,7 @@ export type ActivityEntry = {
   reversible?: boolean
 }
 
-export type ComparisonRoute = 'promptOnly' | 'screenshotGrounded' | 'mapTruthGrounded'
+export type ComparisonRoute = 'promptOnly' | 'screenshotGrounded'
 export type GenerationStatus = 'idle' | 'awaiting_approval' | 'queued' | 'generating' | 'ready' | 'error' | 'cancelled'
 
 export type GenerationRouteState = {
@@ -75,7 +64,6 @@ export type GeographyLock = {
   featureCount: number
 }
 
-export type ComparisonMode = 'poster' | 'source' | 'split' | 'overlay'
 
 export type PlaceSource = 'none' | 'live' | 'overpass' | 'geocoded'
 
@@ -107,15 +95,7 @@ export type MapTruthState = {
   selection?: HumanSelection
   /** Real OSM coordinates for things the prompt named, inside the lock. */
   truthPins: TruthPin[]
-  poster: {
-    spec: PosterSpec
-    status: 'empty' | 'rendering' | 'ready' | 'error'
-    renderedFeatureIds: string[]
-    warnings: string[]
-  }
   ui: {
-    comparisonMode: ComparisonMode
-    seam: number
     webmcpAvailable: boolean
     webmcpStatus: 'checking' | 'available' | 'unavailable' | 'error'
     webmcpMessage?: string
@@ -131,7 +111,6 @@ export type MapTruthState = {
   activity: ActivityEntry[]
 }
 
-export type RenderPosterInput = PosterSpec
 
 export type ToolResult =
   | { status: 'ok'; [key: string]: unknown }

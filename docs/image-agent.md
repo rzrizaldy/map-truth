@@ -8,21 +8,24 @@ Keep the three-level comparison honest, and keep level 3 provably tied to live O
 
 | Route | Evidence | Geographic claim |
 |---|---|---|
-| `promptOnly` | The brief alone | Unverified |
-| `screenshotGrounded` | Brief + captured MapLibre viewport | Visually guided; topology may drift |
-| `mapTruthGrounded` | Brief + screenshot as composition reference + compact lock summary | GPT art only; deterministic vectors supply the geography |
+| `promptOnly` | The brief alone | Invented |
+| `screenshotGrounded` | Brief + a live, located, pinned OpenStreetMap capture, plus a compact lock summary | The real place |
 
-Each route runs independently through `POST /api/generate-route`, reports `idle | awaiting_approval | queued | generating | ready | error | cancelled`, preserves partial success, and supports focused retry.
+Both run independently through `POST /api/generate-route`, report
+`idle | awaiting_approval | queued | generating | ready | error | cancelled`,
+preserve partial success, and support focused retry.
 
 ## Non-negotiable rules
 
 - Use real `gpt-image-2` output; never return a placeholder from an API.
 - Keep `OPENAI_API_KEY` server-side.
-- Level 3's prompt must prohibit generated roads, rivers, routes, boundaries, maps, labels, place names, landmarks, icons, coordinates, and geographic silhouettes.
-- Render level 3 through `PosterSvg`, with `data-source-id` and `data-geometry-hash` on every geographic path, and keep the art layer muted enough that those vectors stay legible.
+- The grounded route's evidence is the captured map. Anything that must reach the
+  model — pins especially — has to be drawn on the live map before capture.
+- Its prompt must tell the model to follow the attached map and not invent
+  streets, districts or landmarks that are not visible in it.
 - Manual and WebMCP actions must call the same command functions.
 - WebMCP generation stages requests and waits for visible human approval.
-- Preserve OSM attribution in all three cards and every export.
+- Preserve OSM attribution in both cards.
 
 ## API handler shape
 
@@ -45,14 +48,14 @@ Files under `api/` each become a function. Shared modules live in `api/_lib/` (l
 
 ## Visual language
 
-Google Maps palette: surface `#FFFFFF` on `#F8F9FA`, text `#202124`, secondary `#5F6368`, borders `#DADCE0`, accent blue `#1A73E8`, park `#CDEAC4`, water `#AADAFF`. Barlow Condensed for headings, Source Sans 3 for copy, IBM Plex Mono for data. The signature is the selectable execution receipt: clicking one highlights its affected source paths. Keep loading states honest, without gradients, generic spinners, sparkles, or chat bubbles.
+Google Maps palette: surface `#FFFFFF` on `#F8F9FA`, text `#202124`, secondary `#5F6368`, borders `#DADCE0`, accent blue `#1A73E8`, park `#CDEAC4`, water `#AADAFF`, pin red `#EA4335`. Barlow Condensed for headings, Source Sans 3 for copy, IBM Plex Mono for data. The signature is the selectable execution receipt: clicking one highlights its affected source paths. Keep loading states honest, without gradients, generic spinners, sparkles, or chat bubbles.
 
 ## Verification checklist
 
-- Levels 1 and 2 start as soon as the map is ready.
-- Level 3 clearly requests a live lock when missing and starts immediately after one exists.
+- The prompt-only route starts as soon as the map is ready.
+- The grounded route clearly requests a lock when missing and starts immediately after one exists.
 - Results arrive independently; a failure does not discard the other routes.
 - Cancellation copy states that the provider request may still finish server-side.
-- The truth seam uses the same feature IDs, bounds, projection, and geometry hashes as the source view.
+- Pins appear on the live map, so they survive into the capture.
 - Manual mode works without `document.modelContext`.
 - Connected Chrome is not reported as WebMCP-complete until it discovers and executes all eight tools.

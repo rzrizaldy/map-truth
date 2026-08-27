@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { generateImage, NoImageGeneratedError, type ImageModel } from 'ai'
 
 export const IMAGE_MODEL_LABEL = 'openai/gpt-image-2' as const
-export const IMAGE_ROUTES = ['promptOnly', 'screenshotGrounded', 'mapTruthGrounded'] as const
+export const IMAGE_ROUTES = ['promptOnly', 'screenshotGrounded'] as const
 export type ImageRoute = typeof IMAGE_ROUTES[number]
 
 const imageModel = (): ImageModel | `${string}/${string}` =>
@@ -27,19 +27,14 @@ const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary }: Gener
   if (route === 'promptOnly') {
     return `${prompt}\nCreate a complete polished 2:3 map poster from the brief alone. Make your own visual and geographic decisions.`
   }
-  if (route === 'screenshotGrounded') {
-    return {
-      text: `${prompt}\nUse the attached live OpenStreetMap viewport as visual reference and redesign it as a polished 2:3 poster. Preserve the visible spatial relationships as closely as possible, while acknowledging this route is pixel-guided rather than geometry-locked.`,
-      images: [sourceImageDataUrl!],
-    }
-  }
   return {
     text:
-      `Generate only a non-geographic art layer for a 2:3 editorial poster. ${prompt}\n` +
-      `The attached image is composition reference only. Live OSM lock context: ${mapSummary}. ` +
-      'Use paper texture, ink fields, framing devices, and abstract civic-print energy. ' +
-      'Do not draw roads, rivers, routes, boundaries, maps, labels, place names, landmarks, icons, coordinates, or geographic silhouettes. ' +
-      'Leave the central field compositionally usable for an exact deterministic vector overlay.',
+      `${prompt}\n` +
+      'The attached image is a real OpenStreetMap view of the exact place this brief is about, ' +
+      `captured live${mapSummary ? ` (${mapSummary})` : ''}. ` +
+      'Redraw it as a polished 2:3 poster. Follow the real street layout, coastlines, waterways and ' +
+      'green space as closely as you can, and keep every marker exactly where it sits on the attached map. ' +
+      'Do not invent streets, districts or landmarks that are not visible in it.',
     images: [sourceImageDataUrl!],
   }
 }

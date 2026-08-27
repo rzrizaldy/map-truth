@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { appStore, DEFAULT_POSTER_SPEC } from '../state/store'
+import { appStore } from '../state/store'
 import { hashGeometry, hashGeometrySync } from '../lib/hash'
 import type { SourceFeature } from '../types/maptruth'
 import { getMapContext, navigateMap, verifyGeography } from './commands'
@@ -29,7 +29,7 @@ beforeEach(() => {
     data: { status: 'ready', features: [feature('osm:a1', [106.815, -6.195]), feature('osm:a2', [106.82, -6.19])], verificationStatus: 'verified' },
     map: { center: [106.82, -6.195], zoom: 12, bbox: [106.785, -6.235, 106.855, -6.155] },
     selection: { kind: 'area', id: 'human:viewport', geometry: viewport, geometryHash: hashGeometrySync(viewport) },
-    poster: { spec: { ...DEFAULT_POSTER_SPEC, emphasizedFeatureIds: [] }, status: 'empty', renderedFeatureIds: [], warnings: [] },
+    truthPins: [],
     activity: [],
   })
 })
@@ -42,6 +42,7 @@ describe('grounded commands', () => {
   })
 
   it('needs a live lock before verifying geography', async () => {
+    appStore.setState((state) => ({ data: { ...state.data, lock: undefined } }))
     expect(await verifyGeography()).toMatchObject({
       status: 'needs_user_action',
       reason: 'live_osm_lock_required',
@@ -59,8 +60,14 @@ describe('grounded commands', () => {
     const inContext = appStore.getState().data.features[0]
     const correctHash = await hashGeometry(inContext.geometry)
     appStore.setState((state) => ({
-      data: { ...state.data, features: [{ ...inContext, properties: { ...inContext.properties, geometryHash: correctHash } }] },
-      poster: { ...state.poster, status: 'ready', renderedFeatureIds: [inContext.properties.id] },
+      data: {
+        ...state.data,
+        features: [{ ...inContext, properties: { ...inContext.properties, geometryHash: correctHash } }],
+        lock: {
+          id: 'live:x', kind: 'live', bbox: [106.785, -6.235, 106.855, -6.155], zoom: 12,
+          sourceRevision: 'r', geometryHash: 'h', createdAt: '', featureCount: 1,
+        },
+      },
     }))
     expect(await verifyGeography()).toMatchObject({ status: 'verified', geometryHashMismatches: [] })
     appStore.setState((state) => ({

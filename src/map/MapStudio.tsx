@@ -15,6 +15,34 @@ import type { SourceFeature, ToolResult } from '../types/maptruth'
 
 const featureCollection = (features: SourceFeature[]) => ({ type: 'FeatureCollection' as const, features })
 
+// Pins live on the map itself, not on a separate art layer, so they are inside
+// the screenshot the image model receives. That is the whole point: the model
+// is shown where the thing actually is instead of guessing.
+const addPinLayer = (map: MapLibreMap) => {
+  if (map.getSource('maptruth-pins')) return
+  map.addSource('maptruth-pins', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+  map.addLayer({
+    id: 'maptruth-pin-halo', type: 'circle', source: 'maptruth-pins',
+    paint: { 'circle-radius': 26, 'circle-color': '#ea4335', 'circle-opacity': 0.16 },
+  })
+  map.addLayer({
+    id: 'maptruth-pin-dot', type: 'circle', source: 'maptruth-pins',
+    paint: { 'circle-radius': 9, 'circle-color': '#ea4335', 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' },
+  })
+  map.addLayer({
+    id: 'maptruth-pin-label', type: 'symbol', source: 'maptruth-pins',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 15,
+      'text-offset': [0, -1.9],
+      'text-anchor': 'bottom',
+      'text-allow-overlap': true,
+    },
+    paint: { 'text-color': '#141416', 'text-halo-color': '#ffffff', 'text-halo-width': 2.2 },
+  })
+}
+
 const addLockOverlay = (map: MapLibreMap) => {
   if (map.getSource('maptruth-lock')) return
   map.addSource('maptruth-lock', { type: 'geojson', data: featureCollection([]) })
@@ -111,6 +139,7 @@ export function MapStudio() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const features = useAppStore((state) => state.data.features)
+  const pins = useAppStore((state) => state.truthPins)
   const selectedReceipt = useAppStore((state) => state.activity.find((entry) => entry.id === state.ui.selectedReceiptId))
 
   useEffect(() => {
@@ -193,7 +222,6 @@ export function MapStudio() {
           ? previousPlace
           : { name: formatPlaceLabel(bbox), source: 'live', resolving: true },
         selection,
-        poster: { ...state.poster, status: 'ready', renderedFeatureIds, warnings: ['Viewport-tile geometry; use Verify with Overpass for canonical OSM IDs.'] },
         ui: { ...state.ui, canUndo: true },
       }))
       void writeCachedLock(cacheKey, { lock, features: normalized })
@@ -255,6 +283,7 @@ export function MapStudio() {
     map.on('load', () => {
       window.clearTimeout(styleWatchdog)
       addLockOverlay(map)
+      addPinLayer(map)
       resize()
       // A stalled tile request must not leave the studio permanently disabled:
       // fall back to ready once the style itself has rendered.
@@ -293,7 +322,6 @@ export function MapStudio() {
           data: { status: 'idle' as const, features: [], verificationStatus: 'idle' as const },
           selection: undefined,
           truthPins: [],
-          poster: { ...state.poster, status: 'empty' as const, renderedFeatureIds: [], warnings: [] },
           ai: { ...state.ai, routes: { ...state.ai.routes, mapTruthGrounded: { status: 'idle' as const } } },
         } : {}),
       }))
@@ -314,6 +342,19 @@ export function MapStudio() {
     if (!map?.isStyleLoaded() || !map.getSource('maptruth-lock')) return
     ;(map.getSource('maptruth-lock') as maplibregl.GeoJSONSource).setData(featureCollection(features))
   }, [features])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map?.isStyleLoaded() || !map.getSource('maptruth-pins')) return
+    ;(map.getSource('maptruth-pins') as maplibregl.GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: pins.map((pin) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: pin.center },
+        properties: { name: pin.name },
+      })),
+    })
+  }, [pins])
 
   useEffect(() => {
     const map = mapRef.current
