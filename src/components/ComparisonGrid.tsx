@@ -8,7 +8,7 @@ import type { ComparisonRoute, GenerationRouteState } from '../types/maptruth'
 
 // A real run captured from production. Judges and first-time visitors see the
 // payoff immediately instead of three empty boxes and a two-minute wait.
-export const EXAMPLE_PROMPT = 'A 1970s Swiss travel poster of Kyoto in autumn'
+export const EXAMPLE_PROMPT = 'Protest safety map — DPR Jakarta'
 const exampleImage: Record<ComparisonRoute, string> = {
   promptOnly: '/example/level-1.jpg',
   screenshotGrounded: '/example/level-2.jpg',
