@@ -26,7 +26,7 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
 - `src/map/liveOsm.ts` — classification, ranking, per-class budget, viewport clipping, lock identity
 - `src/map/MapStudio.tsx` — MapLibre source queries, overlay, tile settling, cache, runtime adapter
-- `src/webmcp/register.ts` + `commands.ts` — eight tool contracts and manual parity
+- `src/webmcp/register.ts` + `commands.ts` — ten tool contracts and manual parity
 - `src/ai/generation.ts` — per-route client state and approval staging
 - `api/generate-route.ts`, `api/osm-extract.ts` — validated Web handlers
 - `src/map/places.ts`, `src/components/PromptStep.tsx` — prompt → place chips → focus
@@ -38,7 +38,7 @@ Live: [map-truth.vercel.app](https://map-truth.vercel.app)
 
 Real agent mode is **verified against production**: Chrome 151 launched with
 `--enable-features=WebMCP` exposes `document.modelContext`, and
-`getTools()` returns all nine tools with schemas and annotations. Reproduce with
+`getTools()` returns all ten tools with schemas and annotations. Reproduce with
 `npm run verify:webmcp` — it drives the installed Chrome, not a stub.
 
 Still open: `WEBMCP_ORIGIN_TRIAL_TOKEN` is not configured, so a visitor using
@@ -46,3 +46,8 @@ stock Chrome without the flag sees Manual mode. Register the origin trial and
 set it as a Vercel **build** env var to make agent mode discoverable without any
 flag. `tests/config/vercel-config.test.ts` already asserts the header appears
 exactly when that variable is set.
+
+The trial was confirmed available on 2026-08-28 for Chrome 149–156, ending
+2026-11-16. The challenge's supported judge path does not depend on that token:
+ChatGPT's in-app Browser supports WebMCP directly, and Chrome 149+ supports it
+with `chrome://flags/#enable-webmcp-testing` enabled.

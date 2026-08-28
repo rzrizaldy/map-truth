@@ -33,17 +33,22 @@ the only thing between the current state and agent mode working for everyone.
 ### 1. Register the trial
 
 Chrome origin trials are registered at <https://developer.chrome.com/origintrials>.
-Sign in with a Google account, find the WebMCP trial, and register the origin:
+The WebMCP trial was confirmed **Available** on 2026-08-28 for Chrome 149–156,
+with an end date of 2026-11-16. Sign in with a Google account and register the
+origin:
 
 ```
 https://map-truth.vercel.app
 ```
 
-Note: I did **not** confirm that WebMCP currently has an active, publicly
-registerable origin trial. Check the active-trials list first. If there is no
-trial open, this task is blocked upstream and there is nothing to do in this repo
-— say so rather than inventing a workaround. Tokens are origin-scoped and
-expire, so record the expiry somewhere visible.
+The direct registration page is
+<https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241>.
+Tokens are origin-scoped and expire, so record the expiry somewhere visible.
+
+This token is polish for visitors using stock Chrome, not a prerequisite for
+challenge judging. The official challenge resources say to use ChatGPT's
+in-app Browser (WebMCP is available directly) or Chrome 149+ with
+`chrome://flags/#enable-webmcp-testing` enabled.
 
 ### 2. Set it as a Vercel **build** environment variable
 

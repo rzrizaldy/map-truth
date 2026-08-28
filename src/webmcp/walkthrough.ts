@@ -10,8 +10,9 @@ export type WalkthroughStep = {
 }
 
 /**
- * The same nine functions WebMCP exposes, driven in the order an assistant
- * would call them.
+ * A visible six-step path through the same functions WebMCP exposes, driven in
+ * the order an assistant would call them. The page registers ten tools in all;
+ * this walkthrough uses only the ones needed to reach the cost approval gate.
  *
  * Production Chrome only exposes `document.modelContext` behind a flag or an
  * origin trial, so without this there is no way to *see* the agent path. This

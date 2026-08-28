@@ -64,8 +64,8 @@ ok    the page reports "Agent mode · 10 tools"
 
 ### Enabling agent mode
 
-- **Locally / for testing:** Chrome with `chrome://flags/#enable-webmcp-testing` enabled, then relaunched.
-- **In production:** a WebMCP origin trial token. Set `WEBMCP_ORIGIN_TRIAL_TOKEN` as a Vercel **build** environment variable; `vercel.ts` emits the `Origin-Trial` header only when it is configured. Without it, stock Chrome reports Manual mode by design.
+- **Challenge testing:** ChatGPT's in-app Browser supports WebMCP directly. In Chrome 149+, enable `chrome://flags/#enable-webmcp-testing` and relaunch.
+- **Stock Chrome:** register the WebMCP origin trial for the production origin and set its token as the Vercel **build** environment variable `WEBMCP_ORIGIN_TRIAL_TOKEN`. `vercel.ts` emits the `Origin-Trial` header only when configured. The current trial covers Chrome 149–156 and ends November 16, 2026; feature detection keeps Manual mode working when it is unavailable.
 
 ## The journey
 

@@ -72,8 +72,8 @@ export function AgentWalkthrough() {
       </div>
       <p className="agent-demo-note">
         {webmcpAvailable
-          ? 'This browser exposes WebMCP, so an assistant can call these nine tools directly. The button runs the same functions so you can watch them.'
-          : 'This browser has no WebMCP, so nothing can call the tools from outside. The button runs the very same nine functions an assistant would — real calls, real receipts, and it still stops at the approval gate.'}
+          ? 'This browser exposes all 10 WebMCP tools. The button makes the six calls needed for this journey so you can watch them reach the approval gate.'
+          : 'This browser has no WebMCP, so an outside assistant cannot call the tools. The button runs the same six-step journey locally — real functions, real receipts, and the same approval gate.'}
       </p>
       {steps.length ? (
         <ol className="agent-steps">
