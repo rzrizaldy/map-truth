@@ -69,6 +69,11 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 .prompt-hint { margin: 0; color: var(--muted); font-size: 13px; }
 .prompt-hint--warn { padding: 10px 12px; border-radius: 8px; background: #fef7e0; color: #b06000; }
 .prompt-hint--found { padding: 10px 12px; border-radius: 8px; background: #e6f4ea; color: #137333; }
+.plan { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.plan-label { font-size: 13px; color: var(--muted); }
+.plan-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.plan-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border: 1px solid; border-radius: 999px; background: var(--surface); font: 600 12px/1 'Source Sans 3', sans-serif; }
+.plan-chip i { width: 9px; height: 9px; border-radius: 50%; }
 .place-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .place-chips-label { font-size: 13px; color: var(--muted); }
 .place-chip { border: 1px solid var(--blue); border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 7px 14px; cursor: pointer; font: 600 13px/1 'Source Sans 3', sans-serif; }

@@ -71,6 +71,12 @@ export const FOCUS_PLACE_SCHEMA = {
   additionalProperties: false,
 } as const
 
+export const MARK_FROM_OSM_SCHEMA = {
+  type: 'object',
+  properties: {},
+  additionalProperties: false,
+} as const
+
 export const EXPORT_ARTWORK_SCHEMA = {
   type: 'object',
   properties: {

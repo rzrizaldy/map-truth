@@ -1,4 +1,4 @@
-import { focusPlace, getMapContext, lockLiveOsm, verifyGeography } from './commands'
+import { focusPlace, getMapContext, lockLiveOsm, markFromOsm, verifyGeography } from './commands'
 import { stageComparisonForApproval } from '../ai/generation'
 import { addActivity, appStore } from '../state/store'
 import type { ToolResult } from '../types/maptruth'
@@ -33,6 +33,11 @@ export const walkthroughSteps = (place: string): WalkthroughStep[] => [
     tool: 'lock_live_osm',
     detail: 'Re-lock so the geometry hash is current',
     run: () => lockLiveOsm('webmcp'),
+  },
+  {
+    tool: 'mark_from_osm',
+    detail: 'Decide what this brief needs, then mark the real ones',
+    run: () => markFromOsm(),
   },
   {
     tool: 'verify_geography',

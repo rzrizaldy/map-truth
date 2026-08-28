@@ -16,7 +16,8 @@ import { chromium } from '@playwright/test'
 const url = process.argv[2] ?? 'https://map-truth.vercel.app/'
 const EXPECTED = [
   'export_artwork', 'focus_place', 'generate_comparison', 'inspect_comparison',
-  'inspect_map_context', 'lock_live_osm', 'navigate_map', 'verify_geography', 'verify_osm_lock',
+  'inspect_map_context', 'lock_live_osm', 'mark_from_osm', 'navigate_map',
+  'verify_geography', 'verify_osm_lock',
 ].sort()
 
 const fail = (message) => { console.error(`FAIL  ${message}`); process.exitCode = 1 }

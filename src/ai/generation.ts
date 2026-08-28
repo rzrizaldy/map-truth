@@ -23,6 +23,10 @@ const compactMapSummary = () => {
       featureCount: state.data.lock.featureCount,
     } : null,
     classes: Object.fromEntries(['road', 'water', 'park', 'landmark'].map((type) => [type, state.data.features.filter((feature) => feature.properties.type === type).length])),
+    // The capture already carries these markers; naming them lets the poster
+    // build an honest legend instead of inventing one.
+    markers: state.overlays.map((marker) => ({ kind: marker.label, name: marker.name, colour: marker.colour })),
+    subject: state.truthPins[0]?.name,
   })
 }
 

@@ -3,6 +3,7 @@ import { generateComparisonManually } from '../ai/generation'
 import { extractPlaceMentions, promptMatchesPlace } from '../map/places'
 import { focusPlace } from '../webmcp/commands'
 import { syncTruthPins } from '../map/pinSync'
+import { syncOverlays } from '../map/overlays'
 import { appStore, useAppStore } from '../state/store'
 
 export function PromptStep() {
@@ -16,12 +17,18 @@ export function PromptStep() {
 
   const mentions = useMemo(() => extractPlaceMentions(prompt), [prompt])
   const pins = useAppStore((state) => state.truthPins)
+  const overlayCategories = useAppStore((state) => state.overlayCategories)
+  const overlays = useAppStore((state) => state.overlays)
+  const overlayStatus = useAppStore((state) => state.overlayStatus)
   const lockId = useAppStore((state) => state.data.lock?.id)
 
   // Look the prompt's named things up in OpenStreetMap once the user pauses.
   useEffect(() => {
     if (!lockId) return
-    const timer = window.setTimeout(() => void syncTruthPins(), 700)
+    const timer = window.setTimeout(() => {
+      void syncTruthPins()
+      void syncOverlays()
+    }, 700)
     return () => window.clearTimeout(timer)
   }, [prompt, lockId])
   const anyRunning = Object.values(routes).some((route) => route.status === 'generating' || route.status === 'queued')
@@ -94,6 +101,31 @@ export function PromptStep() {
           <p className="prompt-hint prompt-hint--found">
             Found in OpenStreetMap: {pins.map((pin) => pin.name).join(', ')} — pinned at real coordinates on the grounded image.
           </p>
+        ) : null}
+
+        {locked && overlayStatus !== 'idle' ? (
+          <div className="plan">
+            <span className="plan-label">
+              {overlayStatus === 'planning' ? 'Working out what this map needs…'
+                : overlayStatus === 'finding' ? 'Looking those up in OpenStreetMap…'
+                : overlays.length ? 'Marked on the map from OpenStreetMap:'
+                : 'Nothing markable found here for this brief.'}
+            </span>
+            {overlayCategories.length ? (
+              <div className="plan-chips">
+                {overlayCategories.map((category) => {
+                  const count = overlays.filter((marker) => marker.category === category.key).length
+                  return (
+                    <span key={category.key} className="plan-chip" style={{ borderColor: category.colour, color: category.colour }}>
+                      <i style={{ background: category.colour }} aria-hidden="true" />
+                      {category.label}
+                      {overlayStatus === 'ready' ? ` · ${count}` : ''}
+                    </span>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="prompt-actions">

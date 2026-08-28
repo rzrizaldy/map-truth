@@ -17,6 +17,10 @@ const summarise = (tool: string, result?: ToolResult): string => {
       ? `${Number(value.checkedFeatureCount ?? 0).toLocaleString()} shapes match their source`
       : `${result.status}${value.reason ? ` · ${String(value.reason)}` : ''}`
   }
+  if (tool === 'mark_from_osm') {
+    const categories = Array.isArray(value.categories) ? (value.categories as string[]) : []
+    return `${Number(value.markerCount ?? 0)} marked · ${categories.join(', ') || 'nothing to mark'}`
+  }
   if (tool === 'generate_comparison') return 'stopped for your approval'
   return String(result.status)
 }

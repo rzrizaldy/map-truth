@@ -3,6 +3,7 @@ import {
   exportGroundedArtwork,
   focusPlace,
   generateComparison,
+  markFromOsm,
   getMapContext,
   inspectComparison,
   lockLiveOsm,
@@ -14,6 +15,7 @@ import {
   EXPORT_ARTWORK_SCHEMA,
   FOCUS_PLACE_SCHEMA,
   GENERATE_COMPARISON_SCHEMA,
+  MARK_FROM_OSM_SCHEMA,
   INSPECT_COMPARISON_SCHEMA,
   INSPECT_MAP_CONTEXT_SCHEMA,
   LOCK_LIVE_OSM_SCHEMA,
@@ -74,6 +76,13 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         execute: () => verifyOsmLock(),
       }, { signal: controller.signal }),
       document.modelContext.registerTool({
+        name: 'mark_from_osm', title: 'Mark what the brief asks for',
+        description: 'Work out which kinds of place the current brief needs — gathering points, medical posts, transit and so on — then mark the real ones from OpenStreetMap on the map itself, so they are inside any capture.',
+        inputSchema: MARK_FROM_OSM_SCHEMA,
+        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        execute: () => markFromOsm(),
+      }, { signal: controller.signal }),
+      document.modelContext.registerTool({
         name: 'generate_comparison', title: 'Stage GPT Image comparison',
         description: 'Stage one or more gpt-image-2 routes. The page requires visible user approval before any costed request begins.',
         inputSchema: GENERATE_COMPARISON_SCHEMA,
@@ -103,7 +112,7 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
       }, { signal: controller.signal }),
     ])
     appStore.setState((state) => ({
-      ui: { ...state.ui, webmcpAvailable: true, webmcpStatus: 'available', webmcpMessage: 'Agent mode active · 9 visible MapTruth tools registered.' },
+      ui: { ...state.ui, webmcpAvailable: true, webmcpStatus: 'available', webmcpMessage: 'Agent mode active · 10 visible MapTruth tools registered.' },
     }))
   } catch (error) {
     controller.abort()

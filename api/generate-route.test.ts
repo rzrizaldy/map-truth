@@ -51,7 +51,10 @@ describe('independent gpt-image-2 route endpoint', () => {
     const options = vi.mocked(generateImage).mock.calls[0][0]
     const prompt = options.prompt as { text: string; images: string[] }
     expect(prompt.text).toContain('real OpenStreetMap view')
-    expect(prompt.text).toContain('Do not invent streets')
+    expect(prompt.text).toContain('do not invent streets')
+    // The markers already on the capture are evidence, not decoration.
+    expect(prompt.text).toContain('coloured dots are real, verified locations')
+    expect(prompt.text).toContain('Do not add markers of your own')
     // Markers drawn on the live map must survive into the poster.
     expect(prompt.text).toContain('keep every marker exactly where it sits')
     expect(prompt.images).toHaveLength(1)

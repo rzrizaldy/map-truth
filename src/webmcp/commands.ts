@@ -2,6 +2,7 @@ import { verifyOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
 import { getMapRuntime } from '../map/runtime'
 import { geocodePlace } from '../map/geocode'
+import { syncOverlays } from '../map/overlays'
 import { geometryHashMatches, geometryHashMatchesSync } from '../lib/hash'
 import { exportRouteImage } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
@@ -214,6 +215,28 @@ export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Pr
     center: resolved.center,
     zoom: resolved.zoom,
   } as ToolResult
+}
+
+/**
+ * Read the brief, decide what the map should show, and mark the real instances.
+ *
+ * The reasoning picks categories only; every coordinate comes from
+ * OpenStreetMap, and the markers land on the live map so they are inside the
+ * capture the image model receives.
+ */
+export const markFromOsm = async (): Promise<ToolResult> => {
+  const state = appStore.getState()
+  if (!state.data.lock) {
+    return { status: 'needs_user_action', reason: 'live_osm_lock_required', suggestedAction: 'lock_live_osm' }
+  }
+  await syncOverlays()
+  const after = appStore.getState()
+  return {
+    status: 'ok',
+    categories: after.overlayCategories.map((category) => category.label),
+    markers: after.overlays.map((marker) => ({ kind: marker.label, name: marker.name, center: marker.center, osmId: marker.osmId })),
+    markerCount: after.overlays.length,
+  }
 }
 
 export const generateComparison = (input: { routes?: unknown; prompt?: unknown }): ToolResult => stageComparisonForApproval(input)

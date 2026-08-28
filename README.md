@@ -23,7 +23,7 @@ The dangerous one is the prettier one. That is the whole problem.
 
 1. Open the site. Both cards already show a finished run — no waiting.
 2. Edit the prompt to name any place — a city, a building, a landmark. A **Go to _that_** button appears; click it. The map flies there and locks.
-3. Anything else the prompt names is looked up in OpenStreetMap, bounded to that viewport, and **pinned on the live map** — so the pin is inside the screenshot the model receives.
+3. Anything else the prompt names is looked up in OpenStreetMap, bounded to that viewport, and **pinned on the live map**. MapTruth also reads the brief for what it asks the map to *show* — gathering points, medical posts — and marks the real ones. All of it is on the map before capture, so it is inside the screenshot the model receives.
 4. Hit **Run the agent on _that place_** to watch the WebMCP tool calls execute live, ending at a human approval gate.
 5. Hit **Make 2 images** for your own run (~50s each, real `gpt-image-2` calls). Click any result for full screen, and follow its **Check on OpenStreetMap** link to confirm the coordinates.
 
@@ -31,11 +31,13 @@ The dangerous one is the prettier one. That is the whole problem.
 
 Agents are starting to browse and act on the web, and they will confidently produce spatial content that is wrong. WebMCP lets a page hand an agent real, typed tools instead of hoping it clicks the right pixels — so a site can supply verified ground truth instead of letting a model infer it from pixels.
 
-MapTruth exposes nine tools:
+MapTruth exposes ten tools:
 
-`inspect_map_context` · `navigate_map` · `focus_place` · `lock_live_osm` · `verify_osm_lock` · `generate_comparison` · `inspect_comparison` · `verify_geography` · `export_artwork`
+`inspect_map_context` · `navigate_map` · `focus_place` · `lock_live_osm` · `verify_osm_lock` · `mark_from_osm` · `generate_comparison` · `inspect_comparison` · `verify_geography` · `export_artwork`
 
-The one that matters is `focus_place`: an assistant grounds an image in "Jakarta", or in the DPR building, by *naming* it — and the page answers with a located, hashed, attributed map it can verify afterwards. `navigate_map` waits for the new viewport's tiles to settle before resolving, so an agent that immediately calls `lock_live_osm` gets real geometry rather than an empty source.
+`mark_from_osm` is where the reasoning happens, and the split is deliberate: **the model decides what kind of thing a brief needs — gathering points, medical posts, transit — and OpenStreetMap decides where those things actually are.** The model picks from a closed vocabulary and never returns a coordinate, so it cannot smuggle an invented location past the lookup. The markers are drawn on the live map, which means they are inside the capture the image model receives.
+
+The other one that matters is `focus_place`: an assistant grounds an image in "Jakarta", or in the DPR building, by *naming* it — and the page answers with a located, hashed, attributed map it can verify afterwards. `navigate_map` waits for the new viewport's tiles to settle before resolving, so an agent that immediately calls `lock_live_osm` gets real geometry rather than an empty source.
 
 Every tool calls the same functions the buttons do. Mutating actions leave visible, selectable receipts; costed generation stops at a visible approval gate. With no WebMCP the page reports **Manual mode** and stays fully usable.
 
@@ -49,11 +51,11 @@ Launches your installed Chrome with the WebMCP feature on (the command-line equi
 
 ```
 ok    document.modelContext is exposed by the browser
-ok    all 9 tools registered and discoverable
+ok    all 10 tools registered and discoverable
 ok    every tool publishes an input schema
 ok    every tool describes itself
 ok    only the two inspect tools claim readOnlyHint
-ok    the page reports "Agent mode · 9 tools"
+ok    the page reports "Agent mode · 10 tools"
 ```
 
 **Watch an assistant do it** on the page runs those same functions in the open, for browsers without WebMCP — not a mock of the tools, the tools, with their real receipts and the same cost gate.
@@ -89,6 +91,8 @@ Three Vercel Functions, all web-standard `POST` handlers:
 
 - `POST /api/generate-route` — validates and runs exactly one `gpt-image-2` route.
 - `POST /api/osm-extract` — canonical Overpass verification for a bounded bbox.
+- `POST /api/plan-overlays` — reads the brief and returns overlay categories from a fixed enum. No coordinates, no queries.
+- `POST /api/osm-overlays` — turns those categories into real, named OpenStreetMap places inside the locked bbox.
 - `POST /api/geocode` — Nominatim lookup: forward (`{query}`), reverse (`{center}`), and viewport-bounded (`{query, within}`) so "DPR" resolves to the parliament building rather than a park of the same name elsewhere. English names, and a zoom clamped to a range the live lock accepts.
 
 > Vercel treats a **default** export as the Node `(req, res)` signature and discards a returned `Response`. Named method exports (`export function POST`) are required for the Web handler shape — a default export makes every request hang until the function times out.

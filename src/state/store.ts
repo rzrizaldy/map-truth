@@ -28,6 +28,9 @@ const baseState = (): MapTruthState => ({
     routes: emptyRoutes(),
   },
   truthPins: [],
+  overlayCategories: [],
+  overlays: [],
+  overlayStatus: 'idle',
   activity: [],
 })
 

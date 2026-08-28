@@ -34,7 +34,9 @@ const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary }: Gener
       `captured live${mapSummary ? ` (${mapSummary})` : ''}. ` +
       'Redraw it as a polished 2:3 poster. Follow the real street layout, coastlines, waterways and ' +
       'green space as closely as you can, and keep every marker exactly where it sits on the attached map. ' +
-      'Do not invent streets, districts or landmarks that are not visible in it.',
+      'The coloured dots are real, verified locations: keep their positions, use their names, and build the ' +
+      'legend from them. Do not add markers of your own, and do not invent streets, districts or landmarks ' +
+      'that are not visible in the attached map.',
     images: [sourceImageDataUrl!],
   }
 }

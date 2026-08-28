@@ -43,6 +43,35 @@ const addPinLayer = (map: MapLibreMap) => {
   })
 }
 
+// Category markers sit above the basemap and below the subject pin, so the
+// capture handed to the image model already carries the real medical posts,
+// gathering points and so on rather than plausible ones.
+const addOverlayLayer = (map: MapLibreMap) => {
+  if (map.getSource('maptruth-overlays')) return
+  map.addSource('maptruth-overlays', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+  map.addLayer({
+    id: 'maptruth-overlay-dot', type: 'circle', source: 'maptruth-overlays',
+    paint: {
+      'circle-radius': 8,
+      'circle-color': ['get', 'colour'],
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': '#ffffff',
+    },
+  })
+  map.addLayer({
+    id: 'maptruth-overlay-label', type: 'symbol', source: 'maptruth-overlays',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': ['Noto Sans Regular'],
+      'text-size': 12,
+      'text-offset': [0, -1.4],
+      'text-anchor': 'bottom',
+      'text-max-width': 9,
+    },
+    paint: { 'text-color': '#202124', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+  })
+}
+
 const addLockOverlay = (map: MapLibreMap) => {
   if (map.getSource('maptruth-lock')) return
   map.addSource('maptruth-lock', { type: 'geojson', data: featureCollection([]) })
@@ -140,6 +169,7 @@ export function MapStudio() {
   const mapRef = useRef<MapLibreMap | null>(null)
   const features = useAppStore((state) => state.data.features)
   const pins = useAppStore((state) => state.truthPins)
+  const overlays = useAppStore((state) => state.overlays)
   const selectedReceipt = useAppStore((state) => state.activity.find((entry) => entry.id === state.ui.selectedReceiptId))
 
   useEffect(() => {
@@ -304,6 +334,7 @@ export function MapStudio() {
     map.on('load', () => {
       window.clearTimeout(styleWatchdog)
       addLockOverlay(map)
+      addOverlayLayer(map)
       addPinLayer(map)
       resize()
       map.on('idle', onIdle)
@@ -330,6 +361,9 @@ export function MapStudio() {
           data: { status: 'idle' as const, features: [], verificationStatus: 'idle' as const },
           selection: undefined,
           truthPins: [],
+          overlays: [],
+          overlayCategories: [],
+          overlayStatus: 'idle' as const,
           ai: { ...state.ai, routes: { ...state.ai.routes, mapTruthGrounded: { status: 'idle' as const } } },
         } : {}),
       }))
@@ -351,6 +385,21 @@ export function MapStudio() {
     if (!map?.isStyleLoaded() || !map.getSource('maptruth-lock')) return
     ;(map.getSource('maptruth-lock') as maplibregl.GeoJSONSource).setData(featureCollection(features))
   }, [features])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map?.isStyleLoaded() || !map.getSource('maptruth-overlays')) return
+    ;(map.getSource('maptruth-overlays') as maplibregl.GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: overlays.map((marker) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: marker.center },
+        properties: { name: marker.name, colour: marker.colour, category: marker.category },
+      })),
+    })
+    // Reflects what is actually on the map, which is what ends up in the capture.
+    if (containerRef.current) containerRef.current.dataset.overlayMarkers = String(overlays.length)
+  }, [overlays])
 
   useEffect(() => {
     const map = mapRef.current

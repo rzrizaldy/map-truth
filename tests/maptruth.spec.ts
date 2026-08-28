@@ -69,7 +69,7 @@ test('the agent walkthrough runs the real tools and stops at the cost gate', asy
 
   // Every step must succeed — a blocked step means an agent could not complete
   // the flow either.
-  await expect(page.locator('.agent-step--done')).toHaveCount(5, { timeout: 90_000 })
+  await expect(page.locator('.agent-step--done')).toHaveCount(6, { timeout: 120_000 })
   await expect(page.locator('.agent-step--blocked')).toHaveCount(0)
   await expect(page.locator('.agent-step').filter({ hasText: 'verify_geography' }))
     .toContainText('match their source')
@@ -142,6 +142,48 @@ test('the grounded result states a source anyone can check', async ({ page }) =>
   await expect(check).toHaveAttribute('href', /openstreetmap\.org\/#map=16\/-?\d+\.\d+\/-?\d+\.\d+/)
 })
 
+test('the brief decides what gets marked, OpenStreetMap decides where', async ({ page }) => {
+  await page.route('**/api/plan-overlays', async (route) => {
+    // Reasoning is a closed vocabulary; the model never returns coordinates.
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        categories: [
+          { key: 'gathering_point', label: 'Gathering point', colour: '#1a73e8' },
+          { key: 'medical', label: 'Medical', colour: '#ea4335' },
+        ],
+      }),
+    })
+  })
+  await page.route('**/api/osm-overlays', async (route) => {
+    const body = route.request().postDataJSON() as { categories?: string[] }
+    expect(body.categories).toEqual(['gathering_point', 'medical'])
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        markers: [
+          { category: 'gathering_point', label: 'Gathering point', colour: '#1a73e8', name: 'Taman Senayan', center: [106.799, -6.213], osmId: 'osm:w1' },
+          { category: 'medical', label: 'Medical', colour: '#ea4335', name: 'RS Pertamina', center: [106.801, -6.208], osmId: 'osm:n2' },
+        ],
+      }),
+    })
+  })
+
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 15_000 })
+
+  await expect(page.locator('.plan-label')).toContainText('Marked on the map from OpenStreetMap', { timeout: 20_000 })
+  await expect(page.locator('.plan-chip')).toHaveCount(2)
+  await expect(page.locator('.plan-chip').first()).toContainText('Gathering point · 1')
+
+  // The markers must land on the map itself, or they never reach the image model.
+  await expect(page.locator('.map-canvas')).toHaveAttribute('data-overlay-markers', '2')
+})
+
 test('any result opens full screen and closes again', async ({ page }) => {
   await page.goto('/')
   await page.locator('.taste-visual--zoom').first().click()
@@ -179,7 +221,7 @@ test('live viewport lock does not wait for Overpass', async ({ page }) => {
   await expect(page.locator('.details-body .demo-toolbar-note')).toContainText('fnv1a:')
 })
 
-test('agent mode registers nine visible WebMCP tools and stages cost approval', async ({ page }) => {
+test('agent mode registers ten visible WebMCP tools and stages cost approval', async ({ page }) => {
   await page.addInitScript(() => {
     const registered: Array<{ name: string; execute: (input: unknown) => unknown }> = []
     Object.defineProperty(document, 'modelContext', {
@@ -191,11 +233,11 @@ test('agent mode registers nine visible WebMCP tools and stages cost approval', 
     ;(window as unknown as { __mapTruthTools: typeof registered }).__mapTruthTools = registered
   })
   await page.goto('/')
-  await expect(page.getByText('Agent mode · 9 tools', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Agent mode · 10 tools', { exact: true })).toBeVisible({ timeout: 15_000 })
   const names = await page.evaluate(() => (window as unknown as { __mapTruthTools: Array<{ name: string }> }).__mapTruthTools.map((tool) => tool.name))
   expect(names).toEqual([
     'inspect_map_context', 'navigate_map', 'focus_place', 'lock_live_osm', 'verify_osm_lock',
-    'generate_comparison', 'inspect_comparison', 'verify_geography', 'export_artwork',
+    'mark_from_osm', 'generate_comparison', 'inspect_comparison', 'verify_geography', 'export_artwork',
   ])
   await page.evaluate(async () => {
     const tool = (window as unknown as { __mapTruthTools: Array<{ name: string; execute: (input: unknown) => unknown }> }).__mapTruthTools.find((item) => item.name === 'generate_comparison')

@@ -26,7 +26,7 @@ export function StatusRail() {
       <span>{data.lock
         ? `${data.features.length.toLocaleString()} real streets, parks and waterways`
         : 'Drag to somewhere you know, then keep the view'}</span>
-      <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 9 tools' : 'Manual mode'}</span>
+      <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 10 tools' : 'Manual mode'}</span>
     </div>
   )
 }

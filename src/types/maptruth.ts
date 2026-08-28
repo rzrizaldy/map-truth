@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
 import type { TruthPin } from '../map/truthPins'
+import type { OverlayMarker, PlannedCategory } from '../map/overlays'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
 export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
@@ -95,6 +96,10 @@ export type MapTruthState = {
   selection?: HumanSelection
   /** Real OSM coordinates for things the prompt named, inside the lock. */
   truthPins: TruthPin[]
+  /** What the brief asked the map to show, and the real places that satisfy it. */
+  overlayCategories: PlannedCategory[]
+  overlays: OverlayMarker[]
+  overlayStatus: 'idle' | 'planning' | 'finding' | 'ready'
   ui: {
     webmcpAvailable: boolean
     webmcpStatus: 'checking' | 'available' | 'unavailable' | 'error'
