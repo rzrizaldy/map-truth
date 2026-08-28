@@ -41,11 +41,12 @@ Real agent mode is **verified against production**: Chrome 151 launched with
 `getTools()` returns all ten tools with schemas and annotations. Reproduce with
 `npm run verify:webmcp` — it drives the installed Chrome, not a stub.
 
-Still open: `WEBMCP_ORIGIN_TRIAL_TOKEN` is not configured, so a visitor using
-stock Chrome without the flag sees Manual mode. Register the origin trial and
-set it as a Vercel **build** env var to make agent mode discoverable without any
-flag. `tests/config/vercel-config.test.ts` already asserts the header appears
-exactly when that variable is set.
+Stock-Chrome agent mode is also **verified against production**. The origin
+trial is registered for `https://map-truth.vercel.app`,
+`WEBMCP_ORIGIN_TRIAL_TOKEN` is configured as a sensitive Vercel Production
+build variable, and deployment `776cc3a` emits both `Origin-Trial` and
+`Permissions-Policy: tools=(self)`. A fresh ordinary Chrome tab reported
+`Agent mode · 10 tools` with no test launcher or command-line flag.
 
 The trial was confirmed available on 2026-08-28 for Chrome 149–156, ending
 2026-11-16. The challenge's supported judge path does not depend on that token:

@@ -1,4 +1,4 @@
-# Notes — finishing the WebMCP setup
+# Notes — WebMCP production setup
 
 Handoff for whoever picks this up next. Everything here was verified against the
 deployed site on 2026-08-28; re-check anything that looks stale before trusting it.
@@ -24,24 +24,25 @@ ok    only the two inspect tools claim readOnlyHint
 ok    the page reports "Agent mode · 10 tools"
 ```
 
-**The one open item.** A visitor on *stock* Chrome — no flag — still sees
-**Manual mode**, because the page never receives an origin-trial token. That is
-the only thing between the current state and agent mode working for everyone.
+**Stock Chrome is working too.** The origin trial is registered for
+`https://map-truth.vercel.app`, and its token is installed as the sensitive
+Vercel Production build variable `WEBMCP_ORIGIN_TRIAL_TOKEN`. Deployment
+`776cc3a` emits the header; a fresh ordinary Chrome tab, with no test launcher,
+reported `Agent mode · 10 tools` on 2026-08-28.
 
-## The task: ship an origin-trial token
+## Origin-trial operations
 
 ### 1. Register the trial
 
 Chrome origin trials are registered at <https://developer.chrome.com/origintrials>.
 The WebMCP trial was confirmed **Available** on 2026-08-28 for Chrome 149–156,
-with an end date of 2026-11-16. Sign in with a Google account and register the
-origin:
+with an end date of 2026-11-16. The registered origin is:
 
 ```
 https://map-truth.vercel.app
 ```
 
-The direct registration page is
+Manage or renew it from the direct registration page:
 <https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241>.
 Tokens are origin-scoped and expire, so record the expiry somewhere visible.
 
@@ -50,10 +51,10 @@ challenge judging. The official challenge resources say to use ChatGPT's
 in-app Browser (WebMCP is available directly) or Chrome 149+ with
 `chrome://flags/#enable-webmcp-testing` enabled.
 
-### 2. Set it as a Vercel **build** environment variable
+### 2. Vercel **build** environment variable
 
-The wiring already exists. `vercel.ts:3` reads the variable and `vercel.ts:25`
-emits the header only when it is set:
+The variable is configured for Production. `vercel.ts:3` reads it and
+`vercel.ts:25` emits the header only when it is set:
 
 ```ts
 const originTrialToken = process.env.WEBMCP_ORIGIN_TRIAL_TOKEN
@@ -66,11 +67,9 @@ const originTrialToken = process.env.WEBMCP_ORIGIN_TRIAL_TOKEN
 It is read while the config compiles, i.e. **at build time** — a runtime-only
 variable will not work, and setting it does nothing until the next deploy.
 
-```bash
-vercel env add WEBMCP_ORIGIN_TRIAL_TOKEN production
-# paste the token, then redeploy:
-git commit --allow-empty -m "Deploy with WebMCP origin trial" && git push
-```
+After renewing the token, replace the Production value and redeploy. It is read
+while the config compiles, so changing the value without a new build has no
+effect.
 
 Add it to `preview` too if preview URLs should also run agent mode — but the
 token is origin-scoped, so a token for `map-truth.vercel.app` will **not** cover
@@ -130,14 +129,10 @@ token out of the HTML source.
   `Response` is discarded, and every request hangs until timeout — it looks like
   a slow upstream, not an error. This already bit the project once.
 
-## Once the token is live
+## Final production receipt
 
-Update the claims that currently hedge:
-
-- `README.md` → "Enabling agent mode" says stock Chrome reports Manual mode by
-  design. That stops being true.
-- `CONTINUE.md` → "WebMCP status" open item.
-- `src/components/AgentWalkthrough.tsx` → the copy explaining that the browser
-  has no WebMCP already switches on `webmcpAvailable`, so it needs no change.
-
-Do not update those before the plain-Chrome check passes.
+- Vercel deployment `776cc3a` reached Ready and owns the production aliases.
+- `Origin-Trial` is present; `Permissions-Policy: tools=(self)` remains present.
+- Plain Chrome reports `Agent mode · 10 tools` and the corrected six-call copy.
+- ChatGPT's in-app Browser discovers exactly ten tools with no console warnings.
+- The registration expires on 2026-11-16 and must be renewed or removed then.
