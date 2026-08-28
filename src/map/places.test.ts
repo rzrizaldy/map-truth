@@ -78,3 +78,19 @@ describe('disambiguating short acronyms', () => {
     expect(extractPlaceMentions('Jakarta DPR').map((m) => m.query)).toEqual(['Jakarta', 'DPR'])
   })
 })
+
+describe('prompts about safety-critical maps', () => {
+  it('does not offer to fly the map to a noun', () => {
+    const mentions = extractPlaceMentions('Protest safety map — DPR Jakarta. Show gathering points and medical posts.')
+    expect(mentions.map((mention) => mention.text)).toEqual(['DPR', 'Jakarta'])
+  })
+
+  it('handles an evacuation brief the same way', () => {
+    const mentions = extractPlaceMentions('Flood evacuation route map for Semarang')
+    expect(mentions.map((mention) => mention.text)).toEqual(['Semarang'])
+  })
+
+  it('still finds a place that genuinely leads the sentence', () => {
+    expect(extractPlaceMentions('Semarang flood evacuation map').map((m) => m.text)).toEqual(['Semarang'])
+  })
+})

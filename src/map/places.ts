@@ -37,6 +37,16 @@ const STOPWORDS = new Set([
   'mapa', 'mappa', 'carte', 'karte', 'kaart', 'kart', 'harita', 'harta',
   'ciudad', 'ville', 'stadt', 'citta', 'cidade', 'stad',
   'plano', 'plan', 'affiche', 'cartel', 'plakat',
+  // The vocabulary this product's prompts are actually made of. These are
+  // nouns, not destinations — "Protest safety map — DPR Jakarta" is about DPR.
+  'protest', 'rally', 'march', 'demonstration', 'safety', 'secure', 'security',
+  'evacuation', 'evacuate', 'emergency', 'disaster', 'flood', 'earthquake', 'fire',
+  'route', 'routes', 'zone', 'zones', 'area', 'areas', 'district', 'districts',
+  'gathering', 'assembly', 'meeting', 'point', 'points', 'post', 'posts',
+  'medical', 'aid', 'shelter', 'shelters', 'hospital', 'clinic',
+  'delivery', 'logistics', 'coverage', 'service', 'venue', 'event', 'festival',
+  'guide', 'infographic', 'diagram', 'layout', 'legend', 'key', 'title',
+  'show', 'showing', 'include', 'including', 'mark', 'marking', 'label', 'labels',
 ])
 
 // Style words that look exactly like places. "A 1970s Swiss travel poster of
