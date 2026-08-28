@@ -36,12 +36,17 @@ export function StudioPage() {
   return (
     <SiteShell headerCode={locked ? place.name : 'MapTruth'}>
       <section className="hero-section" id="top">
-        <div className="section-kicker">GROUND AI IMAGES IN A REAL MAP</div>
-        <h1>AI makes up cities.<br /><em>Give it a real one.</em></h1>
+        <div className="section-kicker">WEBMCP · GROUND TRUTH FOR AI-GENERATED MAPS</div>
+        <h1>A made-up map<br /><em>looks exactly like a real one.</em></h1>
         <p>
-          Ask for a map of any place. You’ll get the same prompt twice — once with the AI guessing,
-          once after an agent found the place and handed it the real map. A guessed map can look
-          more convincing than the real one. That is the problem.
+          Ask any image model for a map of somewhere real and it will invent the streets — confidently,
+          beautifully, and with a legend. That is fine for wall art and dangerous for a protest route,
+          an evacuation plan or a delivery zone.
+        </p>
+        <p className="hero-note">
+          MapTruth gives the model the actual place instead. Type a prompt, and an agent finds it in
+          OpenStreetMap, locks the real viewport, pins what you named at its true coordinates, and hands
+          that over. You get the same prompt both ways — and every claim on the grounded one is checkable.
         </p>
       </section>
 

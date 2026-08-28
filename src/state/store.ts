@@ -24,7 +24,7 @@ const baseState = (): MapTruthState => ({
   },
   ai: {
     prompt:
-      'A vintage travel poster of Jakarta at sunset.',
+      'Protest safety map — DPR Jakarta. Show gathering points and medical posts.',
     routes: emptyRoutes(),
   },
   truthPins: [],

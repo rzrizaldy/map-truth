@@ -42,7 +42,7 @@ export function PromptStep() {
       <div className="step-head">
         <span className="step-num">1</span>
         <h2>Say what you want</h2>
-        <p>Name a real place in your prompt and we’ll take the map there.</p>
+        <p>Name a real place — a city, a building, a landmark — and we’ll take the map there.</p>
       </div>
 
       <div className="prompt-block">
@@ -51,7 +51,7 @@ export function PromptStep() {
           aria-label="What should the image look like?"
           value={prompt}
           maxLength={1200}
-          placeholder="A vintage travel poster of Jakarta at sunset"
+          placeholder="Protest safety map — DPR Jakarta"
           onChange={(event) => appStore.setState((current) => ({ ai: { ...current.ai, prompt: event.target.value } }))}
         />
 

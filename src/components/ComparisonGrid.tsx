@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Lightbox } from './Lightbox'
+import { Provenance } from './Provenance'
 import { exportGroundedArtwork } from '../webmcp/commands'
 import { approvePendingComparison, cancelGeneration, runGenerationRoute } from '../ai/generation'
 import { appStore, useAppStore } from '../state/store'
@@ -104,6 +105,7 @@ export function ComparisonGrid() {
                 <ResultVisual route={route} state={state} />
                 <span className="taste-zoom-hint" aria-hidden="true">⤢</span>
               </button>
+              <Provenance route={route} />
               <div className="card-status-row">
                 <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>
                 {state.durationMs ? <span className="route-duration">{(state.durationMs / 1000).toFixed(0)}s</span> : null}

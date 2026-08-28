@@ -64,7 +64,8 @@ test('the agent walkthrough runs the real tools and stops at the cost gate', asy
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
 
-  await page.getByRole('button', { name: 'Run the agent on Jakarta' }).click()
+  // The button names whatever the prompt leads with, so match on the action.
+  await page.getByRole('button', { name: /^Run the agent on / }).click()
 
   // Every step must succeed — a blocked step means an agent could not complete
   // the flow either.
@@ -123,6 +124,24 @@ test('the prompt pins a real building at its true coordinates', async ({ page })
   await expect(page.locator('.prompt-hint--found')).toContainText('pinned at real coordinates')
 })
 
+test('the grounded result states a source anyone can check', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+
+  // Before any lock, the ungrounded card must already own up to having no source.
+  const cards = page.locator('.taste-card')
+  await expect(cards.first().locator('.provenance--none')).toContainText('invented by the model')
+
+  await page.locator('#step-2').getByRole('button', { name: 'Use this view' }).click()
+  await expect(page.getByText('Using this view', { exact: true }).first()).toBeVisible({ timeout: 15_000 })
+
+  const grounded = cards.nth(1).locator('.provenance')
+  await expect(grounded).toContainText('OpenStreetMap shapes verified')
+  const check = grounded.getByRole('link', { name: /Check on OpenStreetMap/ })
+  // The link must point at the coordinates actually used, not a generic page.
+  await expect(check).toHaveAttribute('href', /openstreetmap\.org\/#map=16\/-?\d+\.\d+\/-?\d+\.\d+/)
+})
+
 test('any result opens full screen and closes again', async ({ page }) => {
   await page.goto('/')
   await page.locator('.taste-visual--zoom').first().click()
@@ -135,7 +154,7 @@ test('any result opens full screen and closes again', async ({ page }) => {
 
 test('the whole journey lives on one page', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /AI makes up cities/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /looks exactly like a real one/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Pick the place' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Spot the difference' })).toBeVisible()
   await expect(page.locator('#step-2').getByRole('button', { name: 'Use this view' })).toBeVisible()
