@@ -14,8 +14,10 @@ MapTruth gives the model the actual place instead. Write a prompt; an agent find
 
 Both images came from *"Protest safety map — DPR Jakarta. Show gathering points and medical posts."*
 
-- **Left, ungrounded.** Four gathering points, four medical posts, road closures, emergency numbers, an official-looking DPR RI seal. Every location in it is invented. Someone planning from it goes to the wrong places.
-- **Right, grounded.** The real street layout around the parliament complex, markers on the actual map, and a source line anyone can check: `6.21021°S 106.80029°E · 1,151 OpenStreetMap shapes verified · Check on OpenStreetMap ↗`
+- **Left, ungrounded.** Gathering points, medical posts, road closures, emergency numbers, an official-looking DPR RI seal. Every location in it is invented. Someone planning from it goes to the wrong places.
+- **Right, grounded.** The real street layout around the parliament complex — and the legend is built from places that exist: Lapangan Panahan, Lapangan Tennis MPR Senayan, Taman Kridaloka, Posyandu RW 02, RSAL dr. Mintohardjo, Kimia Farma. Each sits at its true coordinate, under a source line anyone can check: `6.21021°S 106.80029°E · 1,151 OpenStreetMap shapes verified · Check on OpenStreetMap ↗`
+
+MapTruth read the brief, decided it needed gathering points and medical posts, asked OpenStreetMap where those actually are near the parliament, and marked them on the map *before* handing it over. The model styled a real map instead of imagining one.
 
 The dangerous one is the prettier one. That is the whole problem.
 

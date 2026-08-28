@@ -23,11 +23,13 @@ const addPinLayer = (map: MapLibreMap) => {
   map.addSource('maptruth-pins', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
   map.addLayer({
     id: 'maptruth-pin-halo', type: 'circle', source: 'maptruth-pins',
-    paint: { 'circle-radius': 26, 'circle-color': '#ea4335', 'circle-opacity': 0.16 },
+    paint: { 'circle-radius': 26, 'circle-color': '#202124', 'circle-opacity': 0.14 },
   })
   map.addLayer({
     id: 'maptruth-pin-dot', type: 'circle', source: 'maptruth-pins',
-    paint: { 'circle-radius': 9, 'circle-color': '#ea4335', 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' },
+    // Deliberately not a category colour: the subject must never read as one of
+    // the things being marked around it.
+    paint: { 'circle-radius': 10, 'circle-color': '#202124', 'circle-stroke-width': 3.5, 'circle-stroke-color': '#ffffff' },
   })
   map.addLayer({
     id: 'maptruth-pin-label', type: 'symbol', source: 'maptruth-pins',
