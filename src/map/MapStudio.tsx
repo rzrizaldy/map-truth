@@ -105,6 +105,47 @@ const addOverlayLayer = (map: MapLibreMap) => {
   })
 }
 
+// Places the model named and OpenStreetMap confirmed. Numbered, so the poster
+// can carry a legend that maps one-to-one onto real coordinates.
+const addNamedLayer = (map: MapLibreMap) => {
+  if (map.getSource('maptruth-named')) return
+  map.addSource('maptruth-named', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+  map.addLayer({
+    id: 'maptruth-named-dot', type: 'circle', source: 'maptruth-named',
+    paint: {
+      'circle-radius': 11,
+      'circle-color': '#9334e6',
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#ffffff',
+    },
+  })
+  map.addLayer({
+    id: 'maptruth-named-index', type: 'symbol', source: 'maptruth-named',
+    layout: {
+      'text-field': ['get', 'index'],
+      'text-font': ['Noto Sans Regular'],
+      'text-size': 12,
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: { 'text-color': '#ffffff' },
+  })
+  map.addLayer({
+    id: 'maptruth-named-label', type: 'symbol', source: 'maptruth-named',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': ['Noto Sans Regular'],
+      'text-size': 12,
+      'text-offset': [0, -1.6],
+      'text-anchor': 'bottom',
+      'text-max-width': 10,
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: { 'text-color': '#202124', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+  })
+}
+
 const addLockOverlay = (map: MapLibreMap) => {
   if (map.getSource('maptruth-lock')) return
   map.addSource('maptruth-lock', { type: 'geojson', data: featureCollection([]) })
@@ -213,6 +254,7 @@ export function MapStudio() {
   const features = useAppStore((state) => state.data.features)
   const pins = useAppStore((state) => state.truthPins)
   const overlays = useAppStore((state) => state.overlays)
+  const namedPlaces = useAppStore((state) => state.namedPlaces)
   const selectedReceipt = useAppStore((state) => state.activity.find((entry) => entry.id === state.ui.selectedReceiptId))
 
   useEffect(() => {
@@ -264,10 +306,15 @@ export function MapStudio() {
       const cacheKey = liveLockCacheKey(bbox, zoom)
       const cached = await readCachedLock(cacheKey)
       let normalized = cached?.features ?? normalizeViewportFeatures(candidatesFromMap(map), undefined, undefined, bbox)
-      if (!normalized.length && !map.areTilesLoaded()) {
-        // Tiles for this viewport are still arriving. Give them one settle pass
-        // before telling the caller there is nothing here.
-        await settleTiles()
+      // Tiles for a viewport that was just flown to are often still arriving,
+      // and `areTilesLoaded()` reports true in the gap before the new ones are
+      // even requested — so an empty read is settled and retried on its own
+      // merit rather than trusted.
+      // The first wait covers the usual case; the second is a short fallback,
+      // because a person watching "Going there…" will not wait half a minute.
+      for (const wait of [8_000, 4_000]) {
+        if (normalized.length) break
+        await settleTiles(wait)
         normalized = normalizeViewportFeatures(candidatesFromMap(map), undefined, undefined, bbox)
       }
       if (!normalized.length) {
@@ -332,6 +379,17 @@ export function MapStudio() {
       },
     })
 
+    // If the basemap style never arrives — an outage, or a rate limit — `load`
+    // never fires and every readiness path hangs behind it. Say so instead of
+    // showing a blank rectangle for ever.
+    const stalled = window.setTimeout(() => {
+      if (appStore.getState().ui.mapReady) return
+      appStore.setState((state) => ({
+        data: { ...state.data, status: 'error', error: 'The map service is not responding. Check your connection and try again.' },
+      }))
+      addActivity('map', 'error', 'Basemap style did not load', { source: 'system' })
+    }, 25_000)
+
     map.on('error', (event) => {
       const message = event.error?.message ?? 'MapLibre render error'
       mapElement.dataset.mapError = message
@@ -380,6 +438,7 @@ export function MapStudio() {
       window.clearTimeout(styleWatchdog)
       addLockOverlay(map)
       addOverlayLayer(map)
+      addNamedLayer(map)
       addPinLayer(map)
       resize()
       map.on('idle', onIdle)
@@ -409,6 +468,9 @@ export function MapStudio() {
           overlays: [],
           overlayCategories: [],
           overlayStatus: 'idle' as const,
+          namedPlaces: [],
+          namedPlacesAsked: 0,
+          namedPlacesStatus: 'idle' as const,
           ai: { ...state.ai, routes: { ...state.ai.routes, mapTruthGrounded: { status: 'idle' as const } } },
         } : {}),
       }))
@@ -417,6 +479,7 @@ export function MapStudio() {
     return () => {
       window.clearTimeout(styleWatchdog)
       window.clearTimeout(readyTimer)
+      window.clearTimeout(stalled)
       window.removeEventListener('resize', resize)
       unregisterRuntime()
       map.remove()
@@ -454,6 +517,22 @@ export function MapStudio() {
       () => { if (containerRef.current) containerRef.current.dataset.overlayMarkers = String(overlays.length) },
     )
   }, [overlays])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    return applyWhenReady(map, 'maptruth-named', () => ({
+      type: 'FeatureCollection',
+      features: namedPlaces.map((place, index) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: place.center },
+        properties: {
+          name: place.name.length > 24 ? `${place.name.slice(0, 23).trimEnd()}…` : place.name,
+          index: String(index + 1),
+        },
+      })),
+    }))
+  }, [namedPlaces])
 
   useEffect(() => {
     const map = mapRef.current

@@ -52,3 +52,21 @@ export const searchPlaces = async (query: string): Promise<GeocodedPlace[]> => {
     return []
   }
 }
+
+/**
+ * Resolve a name inside a given viewport.
+ *
+ * Used for names the model suggests: bounding the search is what stops a
+ * plausible-sounding suggestion resolving to a same-named place elsewhere.
+ */
+export const lookupWithinViewport = async (
+  query: string,
+  within: [number, number, number, number],
+): Promise<GeocodedPlace | null> => {
+  try {
+    const payload = await post({ query, within })
+    return payload?.places?.[0] ?? null
+  } catch {
+    return null
+  }
+}

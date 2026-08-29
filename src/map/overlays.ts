@@ -25,10 +25,19 @@ const postJson = async <T>(url: string, body: unknown): Promise<T | null> => {
   }
 }
 
-/** Ask which kinds of place a brief needs, without touching the map. */
-export const planOverlayCategories = async (prompt: string): Promise<PlannedCategory[]> => {
-  const payload = await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt })
-  return payload?.categories ?? []
+export type Plan = { categories: PlannedCategory[]; places: string[] }
+
+/**
+ * Ask what a brief needs: kinds of place, and the specific ones worth naming.
+ *
+ * The place the map is on is part of the question — "the best cafes" has no
+ * answer without it.
+ */
+export const planOverlays = async (prompt: string, place?: string): Promise<Plan> => {
+  const payload = await postJson<{ categories?: PlannedCategory[]; places?: string[] }>(
+    '/api/plan-overlays', { prompt, place },
+  )
+  return { categories: payload?.categories ?? [], places: payload?.places ?? [] }
 }
 
 let inFlight = ''

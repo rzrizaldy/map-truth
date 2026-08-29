@@ -3,7 +3,8 @@ import { MapStudio } from '../map/MapStudio'
 import { PlaceSearch } from './PlaceSearch'
 import { EXAMPLES } from '../map/examples'
 import { geocodePlace } from '../map/geocode'
-import { planOverlayCategories, syncOverlays, type PlannedCategory } from '../map/overlays'
+import { planOverlays, syncOverlays, type Plan } from '../map/overlays'
+import { clearNamedPlaces, resolveNamedPlaces } from '../map/namedPlaces'
 import { syncTruthPins } from '../map/pinSync'
 import { generateComparisonManually } from '../ai/generation'
 import { focusResolvedPlace } from '../webmcp/commands'
@@ -18,11 +19,14 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   const overlays = useAppStore((state) => state.overlays)
   const overlayCategories = useAppStore((state) => state.overlayCategories)
   const overlayStatus = useAppStore((state) => state.overlayStatus)
+  const namedPlaces = useAppStore((state) => state.namedPlaces)
+  const namedAsked = useAppStore((state) => state.namedPlacesAsked)
+  const namedStatus = useAppStore((state) => state.namedPlacesStatus)
 
   const [chosen, setChosen] = useState<GeocodedPlace | undefined>()
   const [moving, setMoving] = useState(false)
   const [focusFailed, setFocusFailed] = useState<string | undefined>()
-  const [plan, setPlan] = useState<{ forPrompt: string; categories: PlannedCategory[] }>({ forPrompt: '', categories: [] })
+  const [plan, setPlan] = useState<Plan & { forPrompt: string }>({ forPrompt: '', categories: [], places: [] })
 
   // The lock must belong to the place that was chosen. Without this a stale
   // lock from a previous place will happily ground the next brief — which is
@@ -43,6 +47,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   const clear = () => {
     setChosen(undefined)
+    clearNamedPlaces()
     appStore.setState((state) => ({
       data: { status: 'idle', features: [], verificationStatus: 'idle' },
       place: { name: 'Nowhere yet', source: 'none' },
@@ -68,16 +73,20 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
     () => (plan.forPrompt === prompt ? plan.categories : []),
     [plan, prompt],
   )
+  const suggested = useMemo(
+    () => (plan.forPrompt === prompt ? plan.places : []),
+    [plan, prompt],
+  )
 
   // Read what the brief asks the map to show, independent of where it is.
   useEffect(() => {
     if (!prompt.trim()) return
     const timer = window.setTimeout(async () => {
-      const categories = await planOverlayCategories(prompt)
-      setPlan({ forPrompt: prompt, categories })
+      const next = await planOverlays(prompt, chosen?.label)
+      setPlan({ forPrompt: prompt, ...next })
     }, 650)
     return () => window.clearTimeout(timer)
-  }, [prompt])
+  }, [prompt, chosen?.label])
 
   // Mark once we have both a place and a plan for it.
   const lockId = data.lock?.id
@@ -88,11 +97,12 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
     const timer = window.setTimeout(() => {
       void syncTruthPins()
       void syncOverlays(planned)
+      void resolveNamedPlaces(suggested)
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [lockId, lockedHere, planning, planned])
+  }, [lockId, lockedHere, planning, planned, suggested])
 
-  const marking = overlayStatus === 'planning' || overlayStatus === 'finding'
+  const marking = overlayStatus === 'planning' || overlayStatus === 'finding' || namedStatus === 'finding'
   const ready = lockedHere && !moving && !marking && !planning && Boolean(prompt.trim())
 
   return (
@@ -171,6 +181,25 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   </i>
                 )) : <em className="readback-muted">just the place itself</em>}
               </span>
+              {namedAsked ? (
+                <span className="readback-line">
+                  <b>Named</b>
+                  {namedStatus === 'finding' ? (
+                    <em className="readback-muted">checking {namedAsked} suggestions…</em>
+                  ) : (
+                    <>
+                      <i className="readback-chip" style={{ borderColor: '#9334e6', color: '#9334e6' }}>
+                        {namedPlaces.length} of {namedAsked} found
+                      </i>
+                      {namedPlaces.length < namedAsked ? (
+                        <em className="readback-muted">
+                          the rest aren’t in OpenStreetMap here, so they aren’t mapped
+                        </em>
+                      ) : null}
+                    </>
+                  )}
+                </span>
+              ) : null}
               <span className="readback-line readback-muted">{data.features.length.toLocaleString()} OpenStreetMap shapes in view</span>
             </>
           )}

@@ -26,13 +26,14 @@ const model = () => (process.env.OPENAI_API_KEY
  * invented location past the OpenStreetMap lookup that follows.
  */
 export async function POST(request: Request): Promise<Response> {
-  let body: { prompt?: unknown }
+  let body: { prompt?: unknown; place?: unknown }
   try {
-    body = (await request.json()) as { prompt?: unknown }
+    body = (await request.json()) as { prompt?: unknown; place?: unknown }
   } catch {
     return json({ error: 'invalid_json' }, { status: 400 })
   }
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim().slice(0, 1_200) : ''
+  const place = typeof body.place === 'string' ? body.place.trim().slice(0, 160) : ''
   if (!prompt) return json({ error: 'prompt_required' }, { status: 400 })
 
   try {
@@ -40,21 +41,37 @@ export async function POST(request: Request): Promise<Response> {
       model: model(),
       abortSignal: AbortSignal.timeout(30_000),
       system:
-        'You decide what a map should mark, given a brief.\n' +
-        'Choose only from this list of categories:\n' +
-        `${categoryMenu()}\n\n` +
-        'Reply with a JSON array of category keys, most important first, at most four. ' +
-        'Choose only what the brief genuinely asks for or clearly implies. ' +
-        'If it asks for nothing markable, reply with []. ' +
-        'Return the array and nothing else.',
-      prompt,
+        'You decide what a map should mark, given a brief about a place.\n\n' +
+        'Reply with JSON only, shaped {"categories": [...], "places": [...]}.\n\n' +
+        'categories — at most four keys, most important first, chosen only from:\n' +
+        `${categoryMenu()}\n` +
+        'Pick only what the brief genuinely asks for or clearly implies; [] if nothing fits.\n\n' +
+        'places — when the brief asks for specific notable spots (the best cafes, famous ' +
+        'landmarks, well-known venues), name up to eight real ones you actually know in ' +
+        'that area, written the way they are commonly signed or listed. These are ' +
+        'suggestions only: each one is looked up in OpenStreetMap and silently dropped ' +
+        'if it cannot be found there, so never pad the list and never invent a name to ' +
+        'fill it. Give [] when the brief calls for a kind of place rather than particular ' +
+        'ones, or when you do not know the area well enough to name real spots.',
+      prompt: place ? `${prompt}\n\nThe map is centred on: ${place}` : prompt,
     })
 
-    const parsed: unknown = JSON.parse((text.match(/\[[\s\S]*\]/) ?? ['[]'])[0])
-    const categories = (Array.isArray(parsed) ? parsed : [])
+    const parsed = JSON.parse((text.match(/\{[\s\S]*\}/) ?? ['{}'])[0]) as {
+      categories?: unknown
+      places?: unknown
+    }
+    const categories = (Array.isArray(parsed.categories) ? parsed.categories : [])
       .filter(isOverlayCategory)
       .filter((value, index, all) => all.indexOf(value) === index)
       .slice(0, 4) as OverlayCategory[]
+
+    // Names only. Nothing here is trusted as a location until OpenStreetMap
+    // says where it is, so no coordinate can enter the map through the model.
+    const places = (Array.isArray(parsed.places) ? parsed.places : [])
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.replace(/\s+/g, ' ').trim().slice(0, 80))
+      .filter((value, index, all) => value.length > 1 && all.indexOf(value) === index)
+      .slice(0, 8)
 
     return json({
       categories: categories.map((key) => ({
@@ -62,10 +79,11 @@ export async function POST(request: Request): Promise<Response> {
         label: OVERLAY_CATEGORIES[key].label,
         colour: OVERLAY_CATEGORIES[key].colour,
       })),
+      places,
     })
   } catch (error) {
     // A planning failure must never block generation; the map simply stays bare.
-    return json({ categories: [], error: 'plan_failed', detail: error instanceof Error ? error.message : 'unknown' })
+    return json({ categories: [], places: [], error: 'plan_failed', detail: error instanceof Error ? error.message : 'unknown' })
   }
 }
 

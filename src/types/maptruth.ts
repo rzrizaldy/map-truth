@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
 import type { TruthPin } from '../map/truthPins'
 import type { OverlayMarker, PlannedCategory } from '../map/overlays'
+import type { NamedPlace } from '../map/namedPlaces'
 
 export type FeatureClass = 'road' | 'water' | 'park' | 'landmark'
 export type FeatureSourceKind = 'viewport_tile' | 'openstreetmap'
@@ -100,6 +101,10 @@ export type MapTruthState = {
   overlayCategories: PlannedCategory[]
   overlays: OverlayMarker[]
   overlayStatus: 'idle' | 'planning' | 'finding' | 'ready' | 'error'
+  /** Places the model named, kept only where OpenStreetMap could locate them. */
+  namedPlaces: NamedPlace[]
+  namedPlacesAsked: number
+  namedPlacesStatus: 'idle' | 'finding' | 'ready'
   ui: {
     webmcpAvailable: boolean
     webmcpStatus: 'checking' | 'available' | 'unavailable' | 'error'

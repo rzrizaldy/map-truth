@@ -35,7 +35,9 @@ const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary, markerC
   // which is the exact failure this route exists to avoid.
   const aboutMarkers = markerCount > 0
     ? 'The coloured dots are real, verified locations: keep their positions, use their names, and build the '
-      + 'legend from them. Do not add markers of your own.'
+      + 'legend from them. Numbered purple dots are named places confirmed to be at those exact coordinates — '
+      + 'keep the numbering and list them in the legend. Do not add markers of your own, and do not name a '
+      + 'place that is not already marked on the attached map.'
     : 'There are no verified locations for this brief, so the poster must not name or pin any individual '
       + 'venue, business or point of interest, and must not include a legend or numbered list of places. '
       + 'Title it, and show only the streets, water and green space visible in the attached map.'

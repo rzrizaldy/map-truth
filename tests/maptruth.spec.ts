@@ -39,7 +39,7 @@ const pickPlace = async (page: Page, query = 'Jakarta') => {
 
 const settled = async (page: Page) => {
   await pickPlace(page)
-  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 30_000 })
+  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 45_000 })
 }
 
 const generate = async (page: Page) => {
@@ -184,7 +184,7 @@ test('choosing a result does not look it up a second time', async ({ page }) => 
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await pickPlace(page)
 
-  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 30_000 })
+  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 45_000 })
   await expect(page.getByRole('button', { name: /Make both maps/ })).toBeEnabled({ timeout: 30_000 })
   expect(asked.some((query) => query.includes(','))).toBe(false)
 })

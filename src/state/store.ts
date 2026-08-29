@@ -32,6 +32,9 @@ const baseState = (): MapTruthState => ({
   overlayCategories: [],
   overlays: [],
   overlayStatus: 'idle',
+  namedPlaces: [],
+  namedPlacesAsked: 0,
+  namedPlacesStatus: 'idle',
   activity: [],
 })
 

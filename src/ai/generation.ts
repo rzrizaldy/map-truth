@@ -26,6 +26,8 @@ const compactMapSummary = () => {
     // The capture already carries these markers; naming them lets the poster
     // build an honest legend instead of inventing one.
     markers: state.overlays.map((marker) => ({ kind: marker.label, name: marker.name, colour: marker.colour })),
+    // Named, numbered and confirmed present at these coordinates.
+    named: state.namedPlaces.map((place, index) => ({ number: index + 1, name: place.name })),
     subject: state.truthPins[0]?.name,
   })
 }

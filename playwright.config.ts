@@ -7,7 +7,9 @@ export default defineConfig({
   testIgnore: '**/config/**',
   timeout: 75_000,
   forbidOnly: isCI,
-  retries: isCI ? 1 : 0,
+  // The suite drives real vector tiles from a public server; a transient
+  // rate limit is worth one retry rather than a red build.
+  retries: 1,
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
