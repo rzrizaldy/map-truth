@@ -2,6 +2,7 @@ import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 import type { ActivityEntry, MapTruthState } from '../types/maptruth'
 import { NYC_CENTER, NYC_ZOOM } from '../map/constants'
+import { EXAMPLES } from '../map/examples'
 
 const emptyRoutes = () => ({
   promptOnly: { status: 'idle' as const },
@@ -23,8 +24,8 @@ const baseState = (): MapTruthState => ({
     canUndo: false,
   },
   ai: {
-    prompt:
-      'Protest safety map — DPR Jakarta. Show gathering points and medical posts.',
+    // Starts on the first example so the picker shows a consistent state.
+    prompt: EXAMPLES[0].prompt,
     routes: emptyRoutes(),
   },
   truthPins: [],

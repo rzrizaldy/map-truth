@@ -9,8 +9,26 @@ export const OVERLAY_CATEGORIES = {
   gathering_point: {
     label: 'Gathering point',
     colour: '#1a73e8',
-    describe: 'open space where a crowd can assemble — parks, squares, plazas',
-    filters: ['["leisure"="park"]', '["leisure"="common"]', '["place"="square"]', '["leisure"="pitch"]'],
+    describe: 'open space where a crowd can assemble — squares, plazas, commons',
+    filters: ['["place"="square"]', '["leisure"="common"]', '["highway"="pedestrian"]'],
+  },
+  landmark: {
+    label: 'Landmark',
+    colour: '#c5221f',
+    describe: 'famous sights worth marking — attractions, monuments, memorials, museums, viewpoints',
+    filters: ['["tourism"="attraction"]', '["historic"="monument"]', '["historic"="memorial"]', '["tourism"="museum"]', '["tourism"="viewpoint"]'],
+  },
+  park: {
+    label: 'Park',
+    colour: '#34a853',
+    describe: 'parks and green space to walk, rest or picnic in',
+    filters: ['["leisure"="park"]', '["leisure"="garden"]', '["leisure"="nature_reserve"]'],
+  },
+  bike: {
+    label: 'Bike',
+    colour: '#0b8043',
+    describe: 'anything for cyclists — bike parking, rental, repair stations',
+    filters: ['["amenity"="bicycle_parking"]', '["amenity"="bicycle_rental"]', '["amenity"="bicycle_repair_station"]'],
   },
   medical: {
     label: 'Medical',
