@@ -1,3 +1,4 @@
+import { overpass } from './_lib/overpass.js'
 import { bboxSpanOk, formatPlaceLabel } from '../src/map/boundary.js'
 import { normalizeOverpassElements, type OverpassElement } from '../src/osm/normalize.js'
 
@@ -56,22 +57,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const response = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MapTruth/1.0 (https://map-truth.vercel.app)',
-      },
-      body: `data=${encodeURIComponent(overpassQuery(south, west, north, east))}`,
-      signal: AbortSignal.timeout(25_000),
-    })
+    const answer = await overpass<OverpassElement>(overpassQuery(south, west, north, east))
+    if (!answer.ok) return json({ error: 'overpass_failed', detail: answer.detail }, { status: 502 })
 
-    if (!response.ok) {
-      return json({ error: 'overpass_failed', detail: `HTTP ${response.status}` }, { status: 502 })
-    }
-
-    const payload = (await response.json()) as { elements?: OverpassElement[] }
-    const features = normalizeOverpassElements(payload.elements ?? [])
+    const features = normalizeOverpassElements(answer.elements)
 
     if (!features.length) {
       return json({ error: 'no_features_in_bbox', suggestedAction: 'zoom_in_or_pan' }, { status: 404 })

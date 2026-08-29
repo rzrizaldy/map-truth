@@ -1,3 +1,4 @@
+import { overpass } from './_lib/overpass.js'
 export const config = { maxDuration: 60 }
 
 const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
@@ -56,19 +57,9 @@ export async function POST(request: Request): Promise<Response> {
   });out center tags 60;`
 
   try {
-    const response = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MapTruth/1.0 (https://map-truth.vercel.app)',
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(30_000),
-    })
-    if (!response.ok) return json({ results: [], error: 'overpass_failed', detail: `HTTP ${response.status}` })
-
-    const payload = (await response.json()) as { elements?: Element[] }
-    const found = (payload.elements ?? [])
+    const answer = await overpass<Element>(query, 25_000)
+    if (!answer.ok) return json({ results: [], error: 'overpass_failed', detail: answer.detail })
+    const found = answer.elements
       .map((element) => ({
         name: element.tags?.name ?? '',
         latitude: element.lat ?? element.center?.lat,

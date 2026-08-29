@@ -1,3 +1,4 @@
+import { overpass } from './_lib/overpass.js'
 import { OVERLAY_CATEGORIES, isOverlayCategory, type OverlayCategory } from './_lib/overlay-categories.js'
 
 export const config = { maxDuration: 60 }
@@ -65,22 +66,12 @@ export async function POST(request: Request): Promise<Response> {
   if (!categories.length) return json({ markers: [] })
 
   try {
-    const response = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MapTruth/1.0 (https://map-truth.vercel.app)',
-      },
-      body: `data=${encodeURIComponent(buildQuery(categories, [west, south, east, north]))}`,
-      signal: AbortSignal.timeout(30_000),
-    })
-    if (!response.ok) return json({ markers: [], error: 'overpass_failed', detail: `HTTP ${response.status}` })
-
-    const payload = (await response.json()) as { elements?: Element[] }
+    const answer = await overpass<Element>(buildQuery(categories, [west, south, east, north]), 30_000)
+    if (!answer.ok) return json({ markers: [], error: 'overpass_failed', detail: answer.detail })
     const perCategory = new Map<OverlayCategory, Array<OverlayMarker & { notable: boolean; distance: number }>>()
     const seen = new Set<string>()
 
-    for (const element of payload.elements ?? []) {
+    for (const element of answer.elements) {
       const tags = element.tags ?? {}
       const name = tags.name
       if (!name) continue
