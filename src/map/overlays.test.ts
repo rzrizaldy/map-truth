@@ -48,3 +48,30 @@ describe('marking the map', () => {
     expect(appStore.getState().overlayStatus).toBe('idle')
   })
 })
+
+describe('when OpenStreetMap does not answer', () => {
+  it('says so rather than reporting zero of everything', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ markers: [], error: 'overpass_failed' })) as never
+    await syncOverlays([{ key: 'bike', label: 'Bike', colour: '#0b8043' }])
+    expect(appStore.getState().overlayStatus).toBe('error')
+    expect(appStore.getState().overlays).toEqual([])
+  })
+
+  it('reports a genuinely empty area as ready, not as a failure', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ markers: [] })) as never
+    await syncOverlays([{ key: 'bike', label: 'Bike', colour: '#0b8043' }])
+    expect(appStore.getState().overlayStatus).toBe('ready')
+  })
+
+  it('lets a failed attempt be retried instead of latching', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ markers: [], error: 'overpass_failed' })) as never
+    const plan = [{ key: 'bike', label: 'Bike', colour: '#0b8043' }]
+    await syncOverlays(plan)
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      markers: [{ category: 'bike', label: 'Bike', colour: '#0b8043', name: 'POGOH', center: [0, 0], osmId: 'osm:n1' }],
+    })) as never
+    await syncOverlays(plan)
+    expect(appStore.getState().overlayStatus).toBe('ready')
+    expect(appStore.getState().overlays).toHaveLength(1)
+  })
+})

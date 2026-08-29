@@ -99,7 +99,7 @@ export type MapTruthState = {
   /** What the brief asked the map to show, and the real places that satisfy it. */
   overlayCategories: PlannedCategory[]
   overlays: OverlayMarker[]
-  overlayStatus: 'idle' | 'planning' | 'finding' | 'ready'
+  overlayStatus: 'idle' | 'planning' | 'finding' | 'ready' | 'error'
   ui: {
     webmcpAvailable: boolean
     webmcpStatus: 'checking' | 'available' | 'unavailable' | 'error'

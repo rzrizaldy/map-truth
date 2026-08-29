@@ -57,14 +57,24 @@ export const syncOverlays = async (planned?: PlannedCategory[]) => {
   }
 
   appStore.setState({ overlayCategories: categories, overlayStatus: 'finding' })
-  const found = await postJson<{ markers?: OverlayMarker[] }>('/api/osm-overlays', {
+  const found = await postJson<{ markers?: OverlayMarker[]; error?: string }>('/api/osm-overlays', {
     bbox: lock.bbox,
     categories: categories.map((category) => category.key),
   })
-  const markers = found?.markers ?? []
 
   // The viewport may have moved while we waited.
   if (appStore.getState().data.lock?.bbox.join(',') !== lock.bbox.join(',')) return
+
+  // "OpenStreetMap was unreachable" and "there is nothing here" are different
+  // answers, and showing both as a count of zero is a quiet lie.
+  if (!found || found.error) {
+    inFlight = ''
+    appStore.setState({ overlays: [], overlayStatus: 'error' })
+    addActivity('mark_from_osm', 'error', 'Could not reach OpenStreetMap to mark the map', { source: 'system' })
+    return
+  }
+
+  const markers = found.markers ?? []
   appStore.setState({ overlays: markers, overlayStatus: 'ready' })
   if (markers.length) {
     addActivity('mark_from_osm', 'ok',

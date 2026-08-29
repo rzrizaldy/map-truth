@@ -101,7 +101,12 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
               </span>
               <span className="readback-line">
                 <b>Marking</b>
-                {overlayCategories.length ? overlayCategories.map((category) => {
+                {overlayStatus === 'error' ? (
+                  <em className="readback-line--warn">
+                    OpenStreetMap didn’t answer — the map is still real, just unmarked.
+                  </em>
+                ) : null}
+                {overlayStatus === 'error' ? null : overlayCategories.length ? overlayCategories.map((category) => {
                   const count = overlays.filter((marker) => marker.category === category.key).length
                   return (
                     <i key={category.key} className="readback-chip" style={{ borderColor: category.colour, color: category.colour }}>
