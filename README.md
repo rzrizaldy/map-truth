@@ -69,13 +69,19 @@ ok    the page reports "Agent mode · 10 tools"
 
 ## The journey
 
-One page, three steps:
+Two screens, each owning the viewport. The page does not scroll.
 
-1. **Say what you want** — write a prompt. Any place it names becomes a one-click button that flies the map there and locks it, so the prompt decides the geography instead of wherever you happened to pan. If the map ends up somewhere the prompt does not mention, the page says so.
-2. **Pick the place** — drag anywhere and keep the view. The OSM vectors already loaded in MapLibre become hashed, traceable geometry in milliseconds, and the viewport resolves to a real place name.
-3. **Spot the difference** — both routes run independently, keep partial success, and support per-route retry and cancellation.
+**1 · Ask.** Brief on the left, map on the right. The map is the read-back: it flies to the place the brief names as you write it, locks the view, pins the subject and marks what was asked for. Alongside, in words: the place it resolved, and what it will mark. A brief that names nowhere says so rather than quietly generating the wrong city.
 
-Hashes, feature counts, Overpass re-verification and the tool receipts live in an "Under the hood" panel, out of the main flow. Old `/demo` and `/about` links land on the same page.
+**2 · Compare.** The two results side by side, each with its source line.
+
+Three starter briefs are one click each — `Peta demo DPR Jakarta`, `New York landmarks & subway`, `Pittsburgh bike trail`. Agent tooling, hashes, Overpass re-verification and the tool receipts live in a drawer behind the **Agent** button, out of the main path. Old `/demo` and `/about` links land on the same page.
+
+### Choosing what to mark
+
+Marking is two steps, deliberately split. The model reads the brief and picks from a **closed vocabulary** of thirteen categories — it never returns a coordinate, a name or a query, so an invented location cannot reach the map through it. OpenStreetMap then supplies real, named places inside the locked viewport, ranked by notability (a Wikidata or Wikipedia link) and then by nearness to the subject, and spread apart so a category cannot stack six markers on one block.
+
+What OSM cannot do is rank fame: it records what exists, not what is famous. That is why the New York brief asks for landmarks and subway stations rather than "iconic" ones — a promise the data can keep.
 
 ## Live OSM, no bundled dataset
 
