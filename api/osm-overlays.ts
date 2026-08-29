@@ -115,11 +115,27 @@ export async function POST(request: Request): Promise<Response> {
       perCategory.set(category, bucket)
     }
 
+    // Six bike docks on one block is worse than four spread along the route:
+    // the labels collide and the map says less. Keep them apart.
+    const minGap = Math.max(east - west, north - south) * 0.07
+    const spread = (candidates: Array<OverlayMarker & { notable: boolean; distance: number }>) => {
+      const kept: typeof candidates = []
+      for (const candidate of candidates) {
+        if (kept.length >= PER_CATEGORY) break
+        const crowded = kept.some((other) =>
+          Math.abs(other.center[0] - candidate.center[0]) < minGap
+          && Math.abs(other.center[1] - candidate.center[1]) < minGap)
+        if (!crowded) kept.push(candidate)
+      }
+      // A tightly clustered category should still show something.
+      if (!kept.length && candidates.length) kept.push(candidates[0])
+      return kept
+    }
+
     // Keep the requested order so the most important category renders first.
     return json({
-      markers: categories.flatMap((key) => (perCategory.get(key) ?? [])
-        .sort((a, b) => Number(b.notable) - Number(a.notable) || a.distance - b.distance)
-        .slice(0, PER_CATEGORY)
+      markers: categories.flatMap((key) => spread((perCategory.get(key) ?? [])
+        .sort((a, b) => Number(b.notable) - Number(a.notable) || a.distance - b.distance))
         .map(({ notable: _notable, distance: _distance, ...marker }) => marker)),
     })
   } catch (error) {

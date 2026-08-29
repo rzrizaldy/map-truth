@@ -63,7 +63,9 @@ const addOverlayLayer = (map: MapLibreMap) => {
   map.addLayer({
     id: 'maptruth-overlay-label', type: 'symbol', source: 'maptruth-overlays',
     layout: {
-      'text-field': ['get', 'name'],
+      // Long operator names ("POGOH - Liberty Avenue & …") swamp a dense
+      // downtown; the first line is what identifies the place.
+      'text-field': ['get', 'short'],
       'text-font': ['Noto Sans Regular'],
       'text-size': 12,
       'text-offset': [0, -1.4],
@@ -403,7 +405,12 @@ export function MapStudio() {
       features: overlays.map((marker) => ({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: marker.center },
-        properties: { name: marker.name, colour: marker.colour, category: marker.category },
+        properties: {
+          name: marker.name,
+          short: marker.name.length > 26 ? `${marker.name.slice(0, 25).trimEnd()}…` : marker.name,
+          colour: marker.colour,
+          category: marker.category,
+        },
       })),
     })
     // Reflects what is actually on the map, which is what ends up in the capture.
