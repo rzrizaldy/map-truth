@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const lookup = vi.hoisted(() => vi.fn())
-vi.mock('./geocode', () => ({ lookupAllWithinViewport: lookup }))
+vi.mock('./namedLookup', () => ({ lookupNamedInViewport: lookup }))
 
 const { appStore } = await import('../state/store')
 const { clearNamedPlaces, resolveNamedPlaces } = await import('./namedPlaces')
@@ -21,7 +21,7 @@ describe('grounding the places a model names', () => {
   it('keeps only the ones OpenStreetMap can locate, and says how many were dropped', async () => {
     lookup.mockImplementation(async (names: string[]) => names.map((query) => ({
       query,
-      place: query === 'Kopi Progo' ? { label: 'Kopi Progo, Bandung', center: [107.61, -6.91] } : null,
+      place: query === 'Kopi Progo' ? { name: 'Kopi Progo', center: [107.61, -6.91], osmId: 'osm:n1' } : null,
     })))
 
     await resolveNamedPlaces(['Kopi Progo', 'A Cafe That Closed', 'Another Ghost'])
