@@ -13,6 +13,31 @@ import { addActivity, appStore, useAppStore } from '../state/store'
 import { captureUndo } from '../state/history'
 import type { SourceFeature, ToolResult } from '../types/maptruth'
 
+/**
+ * Write to a source as soon as the style can accept it, not only if it can now.
+ *
+ * These effects used to give up when the style was mid-load, so markers could
+ * sit in state having never been painted — missing from the capture handed to
+ * the image model, while the request still claimed they were there.
+ */
+const applyWhenReady = (
+  map: MapLibreMap,
+  sourceId: string,
+  build: () => GeoJSON.FeatureCollection,
+  afterApply?: () => void,
+) => {
+  const apply = () => {
+    if (!map.isStyleLoaded() || !map.getSource(sourceId)) return false
+    ;(map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(build())
+    afterApply?.()
+    return true
+  }
+  if (apply()) return () => undefined
+  const retry = () => { if (apply()) map.off('styledata', retry) }
+  map.on('styledata', retry)
+  return () => { map.off('styledata', retry) }
+}
+
 const featureCollection = (features: SourceFeature[]) => ({ type: 'FeatureCollection' as const, features })
 
 // Pins live on the map itself, not on a separate art layer, so they are inside
@@ -402,41 +427,45 @@ export function MapStudio() {
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map?.isStyleLoaded() || !map.getSource('maptruth-lock')) return
-    ;(map.getSource('maptruth-lock') as maplibregl.GeoJSONSource).setData(featureCollection(features))
+    if (!map) return
+    return applyWhenReady(map, 'maptruth-lock', () => featureCollection(features))
   }, [features])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map?.isStyleLoaded() || !map.getSource('maptruth-overlays')) return
-    ;(map.getSource('maptruth-overlays') as maplibregl.GeoJSONSource).setData({
-      type: 'FeatureCollection',
-      features: overlays.map((marker) => ({
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates: marker.center },
-        properties: {
-          name: marker.name,
-          short: marker.name.length > 26 ? `${marker.name.slice(0, 25).trimEnd()}…` : marker.name,
-          colour: marker.colour,
-          category: marker.category,
-        },
-      })),
-    })
-    // Reflects what is actually on the map, which is what ends up in the capture.
-    if (containerRef.current) containerRef.current.dataset.overlayMarkers = String(overlays.length)
+    if (!map) return
+    return applyWhenReady(
+      map,
+      'maptruth-overlays',
+      () => ({
+        type: 'FeatureCollection',
+        features: overlays.map((marker) => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: marker.center },
+          properties: {
+            name: marker.name,
+            short: marker.name.length > 26 ? `${marker.name.slice(0, 25).trimEnd()}…` : marker.name,
+            colour: marker.colour,
+            category: marker.category,
+          },
+        })),
+      }),
+      // Set only once painted, so it reports what the capture will contain.
+      () => { if (containerRef.current) containerRef.current.dataset.overlayMarkers = String(overlays.length) },
+    )
   }, [overlays])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map?.isStyleLoaded() || !map.getSource('maptruth-pins')) return
-    ;(map.getSource('maptruth-pins') as maplibregl.GeoJSONSource).setData({
+    if (!map) return
+    return applyWhenReady(map, 'maptruth-pins', () => ({
       type: 'FeatureCollection',
       features: pins.map((pin) => ({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: pin.center },
         properties: { name: pin.name },
       })),
-    })
+    }))
   }, [pins])
 
   useEffect(() => {
