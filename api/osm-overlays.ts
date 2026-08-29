@@ -73,7 +73,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!response.ok) return json({ markers: [], error: 'overpass_failed', detail: `HTTP ${response.status}` })
 
     const payload = (await response.json()) as { elements?: Element[] }
-    const perCategory = new Map<OverlayCategory, OverlayMarker[]>()
+    const perCategory = new Map<OverlayCategory, Array<OverlayMarker & { notable: boolean }>>()
     const seen = new Set<string>()
 
     for (const element of payload.elements ?? []) {
@@ -86,25 +86,33 @@ export async function POST(request: Request): Promise<Response> {
 
       const category = categories.find((key) => matches(tags, key))
       if (!category) continue
-      const bucket = perCategory.get(category) ?? []
-      if (bucket.length >= PER_CATEGORY) continue
       const key = `${category}:${name.toLowerCase()}`
       if (seen.has(key)) continue
       seen.add(key)
 
+      const bucket = perCategory.get(category) ?? []
       bucket.push({
         category,
         label: OVERLAY_CATEGORIES[category].label,
         colour: OVERLAY_CATEGORIES[category].colour,
         name,
         center: [longitude, latitude],
+        // OpenStreetMap carries no fame ranking, but a Wikidata or Wikipedia
+        // link is a fair proxy: it is how "iconic landmarks" surfaces the
+        // Statue of Liberty rather than the nearest fire-department museum.
+        notable: Boolean(tags.wikidata ?? tags.wikipedia),
         osmId: `osm:${element.type[0]}${element.id}`,
       })
       perCategory.set(category, bucket)
     }
 
     // Keep the requested order so the most important category renders first.
-    return json({ markers: categories.flatMap((key) => perCategory.get(key) ?? []) })
+    return json({
+      markers: categories.flatMap((key) => (perCategory.get(key) ?? [])
+        .sort((a, b) => Number(b.notable) - Number(a.notable))
+        .slice(0, PER_CATEGORY)
+        .map(({ notable: _notable, ...marker }) => marker)),
+    })
   } catch (error) {
     return json({ markers: [], error: 'overpass_failed', detail: error instanceof Error ? error.message : 'unknown' })
   }
