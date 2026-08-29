@@ -200,6 +200,11 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   )}
                 </span>
               ) : null}
+              {namedPlaces.length ? (
+                <ol className="named-list">
+                  {namedPlaces.map((place) => <li key={place.name}>{place.name}</li>)}
+                </ol>
+              ) : null}
               <span className="readback-line readback-muted">{data.features.length.toLocaleString()} OpenStreetMap shapes in view</span>
             </>
           )}

@@ -105,8 +105,9 @@ const addOverlayLayer = (map: MapLibreMap) => {
   })
 }
 
-// Places the model named and OpenStreetMap confirmed. Numbered, so the poster
-// can carry a legend that maps one-to-one onto real coordinates.
+// Places the model named and OpenStreetMap confirmed. Numbered rather than
+// labelled: several of them often sit on the same few blocks, and stacked names
+// hide each other. The numbers key into the legend beside the map.
 const addNamedLayer = (map: MapLibreMap) => {
   if (map.getSource('maptruth-named')) return
   map.addSource('maptruth-named', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -129,20 +130,6 @@ const addNamedLayer = (map: MapLibreMap) => {
       'text-ignore-placement': true,
     },
     paint: { 'text-color': '#ffffff' },
-  })
-  map.addLayer({
-    id: 'maptruth-named-label', type: 'symbol', source: 'maptruth-named',
-    layout: {
-      'text-field': ['get', 'name'],
-      'text-font': ['Noto Sans Regular'],
-      'text-size': 12,
-      'text-offset': [0, -1.6],
-      'text-anchor': 'bottom',
-      'text-max-width': 10,
-      'text-allow-overlap': true,
-      'text-ignore-placement': true,
-    },
-    paint: { 'text-color': '#202124', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
   })
 }
 
