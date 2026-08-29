@@ -69,6 +69,10 @@ const addOverlayLayer = (map: MapLibreMap) => {
       'text-offset': [0, -1.4],
       'text-anchor': 'bottom',
       'text-max-width': 9,
+      // Every marked place must be named in the capture. A label dropped for
+      // collision leaves the image model a dot with no meaning.
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
     },
     paint: { 'text-color': '#202124', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
   })
@@ -85,7 +89,10 @@ const addLockOverlay = (map: MapLibreMap) => {
   map.addLayer({
     id: 'maptruth-lock-lines', type: 'line', source: 'maptruth-lock',
     filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
-    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4285f4', 'road', '#1a73e8', '#5f6368'], 'line-width': 2, 'line-opacity': 0.8 },
+    // Light enough that the basemap stays readable underneath: at city zoom
+    // this layer can carry a few thousand segments, and a saturated blue mat is
+    // worse input for the image model than a clean map.
+    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4285f4', 'road', '#1a73e8', '#5f6368'], 'line-width': 1.2, 'line-opacity': 0.45 },
   })
   map.addLayer({
     id: 'maptruth-lock-points', type: 'circle', source: 'maptruth-lock',
