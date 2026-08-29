@@ -90,11 +90,18 @@ const addLockOverlay = (map: MapLibreMap) => {
   })
   map.addLayer({
     id: 'maptruth-lock-lines', type: 'line', source: 'maptruth-lock',
-    filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
+    // Roads only. A river drawn as a blue line is indistinguishable from a road
+    // drawn as a blue line, so the overlay was inventing streets along every
+    // waterway — the basemap already renders water, and water polygons still
+    // fill below.
+    filter: ['all',
+      ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]],
+      ['!=', ['get', 'type'], 'water'],
+    ],
     // Light enough that the basemap stays readable underneath: at city zoom
     // this layer can carry a few thousand segments, and a saturated blue mat is
     // worse input for the image model than a clean map.
-    paint: { 'line-color': ['match', ['get', 'type'], 'water', '#4285f4', 'road', '#1a73e8', '#5f6368'], 'line-width': 1.2, 'line-opacity': 0.45 },
+    paint: { 'line-color': ['match', ['get', 'type'], 'road', '#1a73e8', '#5f6368'], 'line-width': 1.2, 'line-opacity': 0.45 },
   })
   map.addLayer({
     id: 'maptruth-lock-points', type: 'circle', source: 'maptruth-lock',
@@ -197,6 +204,8 @@ export function MapStudio() {
       attributionControl: false,
     })
     mapRef.current = map
+    // Layer-level assertions have no DOM to inspect; the canvas is opaque.
+    ;(window as unknown as { __mapTruthMap?: MapLibreMap }).__mapTruthMap = map
     const mapElement = containerRef.current
     let invalidateOnMoveEnd = false
 

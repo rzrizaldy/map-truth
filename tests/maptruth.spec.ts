@@ -162,6 +162,25 @@ test('the brief decides what gets marked, OpenStreetMap decides where', async ({
   await expect(page.locator('.map-canvas')).toHaveAttribute('data-overlay-markers', '2', { timeout: 25_000 })
 })
 
+test('waterways are never drawn as lines', async ({ page }) => {
+  await stubPlace(page)
+  await stubMarking(page, [], [])
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await settled(page)
+
+  // A blue line over a river reads as a road that is not there.
+  const drawn = await page.evaluate(() => {
+    const map = (window as unknown as { __mapTruthMap?: { queryRenderedFeatures: (options: unknown) => Array<{ properties: Record<string, unknown> }> } }).__mapTruthMap
+    if (!map) return null
+    return map.queryRenderedFeatures({ layers: ['maptruth-lock-lines'] })
+      .map((feature) => String(feature.properties.type))
+  })
+  expect(drawn).not.toBeNull()
+  expect(drawn).not.toContain('water')
+  expect(drawn?.length).toBeGreaterThan(0)
+})
+
 test('one screen at a time — the page never scrolls', async ({ page, isMobile }) => {
   test.skip(Boolean(isMobile), 'mobile stacks the panel above the map and scrolls by design')
   await stubPlace(page)
