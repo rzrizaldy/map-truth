@@ -14,7 +14,7 @@ type Element = {
   tags?: Record<string, string>
 }
 
-const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const quote = (value: string) => value.replace(/["\\]/g, '\\$&')
 
 const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -48,9 +48,12 @@ export async function POST(request: Request): Promise<Response> {
   if (!names.length) return json({ results: [] })
 
   const box = `${south},${west},${north},${east}`
+  // Exact `name=` matches use Overpass's name index and return in a second. A
+  // case-insensitive regex over the same box has to scan every named object and
+  // times out, which is what a bbox the size of a city was doing.
   const query = `[out:json][timeout:25];(${
-    names.map((name) => `nwr["name"~"${escapeRegex(name)}",i](${box});`).join('')
-  });out center tags 200;`
+    names.map((name) => `nwr["name"="${quote(name)}"](${box});`).join('')
+  });out center tags 60;`
 
   try {
     const response = await fetch('https://overpass-api.de/api/interpreter', {
