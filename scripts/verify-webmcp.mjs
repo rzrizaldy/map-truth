@@ -76,10 +76,11 @@ try {
     ? pass('only the two inspect tools claim readOnlyHint')
     : fail(`readOnlyHint set on: ${readOnly.join(', ') || '(none)'}`)
 
-  const badge = await page.locator('.agent-mode').textContent()
+  // The badge is the claim a visitor actually sees, so check the rendered one.
+  const badge = (await page.locator('.agent-mode').first().textContent({ timeout: 15_000 }).catch(() => null))?.trim()
   badge?.includes('Agent mode')
-    ? pass(`the page reports "${badge.trim()}"`)
-    : fail(`the page still reports "${badge?.trim()}" with WebMCP present`)
+    ? pass(`the page reports "${badge}"`)
+    : fail(`the page reports "${badge ?? 'no badge at all'}" with WebMCP present`)
 
   console.log(`\n${tools.map((t) => `  ${t.name}`).join('\n')}\n`)
 } finally {

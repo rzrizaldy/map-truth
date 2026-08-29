@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useAppStore } from '../state/store'
 
 type SiteShellProps = {
   children: ReactNode
@@ -23,11 +24,7 @@ export function SiteShell({ children, headerCode = 'WEBMCP', stage, onAgent, age
           {headerCode && headerCode !== 'MapTruth'
             ? <span className="header-code">{headerCode}</span>
             : null}
-          {onAgent ? (
-            <button type="button" className={`agent-toggle ${agentOpen ? 'agent-toggle--on' : ''}`} onClick={onAgent}>
-              Agent
-            </button>
-          ) : null}
+          {onAgent ? <AgentBadge onClick={onAgent} open={Boolean(agentOpen)} /> : null}
         </div>
       </header>
       {children}
@@ -36,5 +33,25 @@ export function SiteShell({ children, headerCode = 'WEBMCP', stage, onAgent, age
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Attribution</a>
       </footer>
     </main>
+  )
+}
+
+/**
+ * Whether an agent can actually drive this page, stated in the header.
+ *
+ * This is the WebMCP claim, so it belongs where it is always visible rather
+ * than behind the drawer it opens.
+ */
+function AgentBadge({ onClick, open }: { onClick: () => void; open: boolean }) {
+  const available = useAppStore((state) => state.ui.webmcpAvailable)
+  return (
+    <button
+      type="button"
+      className={`agent-mode agent-toggle ${available ? 'agent-mode--available' : ''} ${open ? 'agent-toggle--on' : ''}`}
+      onClick={onClick}
+      title={available ? 'This browser exposes WebMCP' : 'No WebMCP here — the walkthrough runs the same tools'}
+    >
+      {available ? 'Agent mode · 10 tools' : 'Manual mode'}
+    </button>
   )
 }

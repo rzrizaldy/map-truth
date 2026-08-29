@@ -200,6 +200,14 @@ test('legacy /demo and /about links land on the same journey', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'What map do you need?' })).toBeVisible()
 })
 
+test('the header states whether an agent can drive the page', async ({ page }) => {
+  await stubPlace(page)
+  await stubMarking(page, [], [])
+  await page.goto('/')
+  // No WebMCP in plain Playwright Chromium, and the page must say so.
+  await expect(page.locator('.agent-mode')).toContainText('Manual mode', { timeout: 20_000 })
+})
+
 test('agent mode registers ten visible WebMCP tools', async ({ page }) => {
   await page.addInitScript(() => {
     const registered: Array<{ name: string; execute: (input: unknown) => unknown }> = []
@@ -213,6 +221,7 @@ test('agent mode registers ten visible WebMCP tools', async ({ page }) => {
   await stubMarking(page, [], [])
   await page.goto('/')
 
+  await expect(page.locator('.agent-mode')).toContainText('Agent mode · 10 tools', { timeout: 20_000 })
   const names = await page.evaluate(() => (window as unknown as { __mapTruthTools: Array<{ name: string }> }).__mapTruthTools.map((tool) => tool.name))
   expect(names).toEqual([
     'inspect_map_context', 'navigate_map', 'focus_place', 'lock_live_osm', 'verify_osm_lock',
@@ -228,7 +237,7 @@ test('the agent drawer runs the real tools and stops at the cost gate', async ({
 
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  await page.getByRole('button', { name: 'Agent', exact: true }).click()
+  await page.locator('.agent-toggle').click()
   await expect(page.locator('.drawer')).toBeVisible()
 
   await page.getByRole('button', { name: /^Run the agent on / }).click()
