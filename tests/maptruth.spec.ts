@@ -162,6 +162,33 @@ test('the brief decides what gets marked, OpenStreetMap decides where', async ({
   await expect(page.locator('.map-canvas')).toHaveAttribute('data-overlay-markers', '2', { timeout: 25_000 })
 })
 
+test('choosing a result does not look it up a second time', async ({ page }) => {
+  const asked: string[] = []
+  await page.route('**/api/geocode', async (route) => {
+    const body = route.request().postDataJSON() as { query?: string; center?: unknown }
+    if (body.center) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ place: JAKARTA }) })
+    }
+    const query = String(body.query ?? '')
+    asked.push(query)
+    // Real Nominatim cannot resolve its own long display label. Depending on
+    // that round-trip left the map unlocked and the panel waiting forever.
+    if (query.includes(',')) {
+      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'place_not_found' }) })
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ query, places: [JAKARTA] }) })
+  })
+  await stubMarking(page, [], [])
+
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await pickPlace(page)
+
+  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 30_000 })
+  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeEnabled({ timeout: 30_000 })
+  expect(asked.some((query) => query.includes(','))).toBe(false)
+})
+
 test('waterways are never drawn as lines', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])

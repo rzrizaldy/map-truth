@@ -41,6 +41,7 @@ main { max-width: none; margin: 0; padding: 0; }
 .readback-line em { font-style: normal; font-weight: 600; }
 .readback-muted { color: var(--muted); }
 .readback-line--warn { color: #b06000; }
+.retry { margin-left: 8px; border: 1px solid currentColor; border-radius: 6px; background: transparent; color: inherit; padding: 3px 9px; cursor: pointer; font: 600 11px/1 'Source Sans 3', sans-serif; }
 .readback-chip { display: inline-flex; align-items: center; padding: 3px 9px; border: 1px solid; border-radius: 999px; font: 600 11px/1.4 'Source Sans 3', sans-serif; font-style: normal; }
 
 .button--go { min-height: 46px; font-size: 15px; margin-top: auto; }

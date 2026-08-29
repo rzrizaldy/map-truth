@@ -2,6 +2,7 @@ import { verifyOsmExtract } from '../map/fetchExtract'
 import { featuresInContext } from '../map/context'
 import { getMapRuntime } from '../map/runtime'
 import { geocodePlace } from '../map/geocode'
+import type { GeocodedPlace } from '../map/placeTypes'
 import { syncOverlays } from '../map/overlays'
 import { geometryHashMatches, geometryHashMatchesSync } from '../lib/hash'
 import { exportRouteImage } from '../poster/export'
@@ -166,6 +167,34 @@ export const navigateMap = async (input: { center?: unknown; zoom?: unknown; lab
  * caller wants is "the place my prompt is about". This is the tool that makes
  * the prompt able to steer the map.
  */
+/**
+ * Fly to a place that has already been resolved, and lock it.
+ *
+ * The search box hands back a full OpenStreetMap record. Re-geocoding its own
+ * display label ("Dewan Perwakilan Rakyat / Majelis …, Jalan …, Indonesia")
+ * frequently finds nothing, which left the map unlocked and the interface
+ * waiting forever — so a known place skips the lookup entirely.
+ */
+export const focusResolvedPlace = async (
+  resolved: GeocodedPlace,
+  displayName = resolved.name,
+): Promise<ToolResult> => {
+  const runtime = getMapRuntime()
+  if (!runtime) return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
+
+  captureUndo(`focus on ${displayName}`)
+  await runtime.navigate(resolved.center, resolved.zoom)
+  appStore.setState((state) => ({
+    place: { name: displayName, label: resolved.label, query: displayName, center: resolved.center, source: 'geocoded', resolving: false },
+    ui: { ...state.ui, canUndo: true },
+  }))
+  addActivity('focus_place', 'ok', `Map moved to ${resolved.label}`, {
+    source: 'manual', afterHash: `${resolved.center.join(',')}/${resolved.zoom}`, reversible: true,
+  })
+  const lock = await runtime.lockLiveOsm('manual')
+  return { ...lock, place: displayName, label: resolved.label, center: resolved.center, zoom: resolved.zoom } as ToolResult
+}
+
 export const focusPlace = async (input: { place?: unknown; lock?: unknown }): Promise<ToolResult> => {
   const query = typeof input.place === 'string' ? cleanText(input.place, 120) : ''
   if (!query) return { status: 'error', reason: 'invalid_place' }

@@ -6,7 +6,7 @@ import { geocodePlace } from '../map/geocode'
 import { planOverlayCategories, syncOverlays, type PlannedCategory } from '../map/overlays'
 import { syncTruthPins } from '../map/pinSync'
 import { generateComparisonManually } from '../ai/generation'
-import { focusPlace } from '../webmcp/commands'
+import { focusResolvedPlace } from '../webmcp/commands'
 import type { GeocodedPlace } from '../map/placeTypes'
 import { appStore, useAppStore } from '../state/store'
 
@@ -21,6 +21,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   const [chosen, setChosen] = useState<GeocodedPlace | undefined>()
   const [moving, setMoving] = useState(false)
+  const [focusFailed, setFocusFailed] = useState<string | undefined>()
   const [plan, setPlan] = useState<{ forPrompt: string; categories: PlannedCategory[] }>({ forPrompt: '', categories: [] })
 
   // The lock must belong to the place that was chosen. Without this a stale
@@ -30,8 +31,13 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   const choose = async (next: GeocodedPlace) => {
     setChosen(next)
+    setFocusFailed(undefined)
     setMoving(true)
-    await focusPlace({ place: next.label })
+    // The record is already resolved; looking its own label up again fails.
+    const outcome = await focusResolvedPlace(next)
+    // A failed lock used to leave the panel reading "Reading the map…" for
+    // ever, with nothing to act on.
+    setFocusFailed(outcome.status === 'ok' ? undefined : String(outcome.reason ?? 'lock_failed'))
     setMoving(false)
   }
 
@@ -134,6 +140,15 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
             <span className="readback-line readback-muted">Pick a place and the map will lock onto it.</span>
           ) : moving ? (
             <span className="readback-line readback-muted">Going to {chosen.name}…</span>
+          ) : focusFailed ? (
+            <span className="readback-line readback-line--warn">
+              {focusFailed === 'bbox_too_large'
+                ? 'That area is too wide to read. Pick somewhere more specific.'
+                : focusFailed === 'no_supported_features'
+                  ? 'No OpenStreetMap detail here yet. Try a nearby town or city.'
+                  : 'Could not read the map there.'}
+              <button type="button" className="retry" onClick={() => void choose(chosen)}>Try again</button>
+            </span>
           ) : !lockedHere ? (
             <span className="readback-line readback-muted">Reading the map…</span>
           ) : (
