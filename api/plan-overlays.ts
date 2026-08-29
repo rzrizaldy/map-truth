@@ -46,13 +46,15 @@ export async function POST(request: Request): Promise<Response> {
         'categories — at most four keys, most important first, chosen only from:\n' +
         `${categoryMenu()}\n` +
         'Pick only what the brief genuinely asks for or clearly implies; [] if nothing fits.\n\n' +
-        'places — when the brief asks for specific notable spots (the best cafes, famous ' +
-        'landmarks, well-known venues), name up to eight real ones you actually know in ' +
-        'that area, written the way they are commonly signed or listed. These are ' +
-        'suggestions only: each one is looked up in OpenStreetMap and silently dropped ' +
-        'if it cannot be found there, so never pad the list and never invent a name to ' +
-        'fill it. Give [] when the brief calls for a kind of place rather than particular ' +
-        'ones, or when you do not know the area well enough to name real spots.',
+        'places — if the brief asks for the best, the most famous, the most iconic, or a ' +
+        'numbered pick of anything ("7 spot pilihan", "top cafes", "must-see landmarks"), ' +
+        'then name the specific real ones you know in this area, up to eight, written the ' +
+        'way they are commonly signed or listed locally. This is the part you are for: ' +
+        'OpenStreetMap can say what exists but not what is famous, so if you know the area ' +
+        'at all, name them. Every name is looked up in OpenStreetMap and dropped if it is ' +
+        'not there, so a wrong guess costs nothing and an omission costs the whole answer. ' +
+        'Return [] only when the brief asks for a kind of place in general rather than ' +
+        'particular ones.',
       prompt: place ? `${prompt}\n\nThe map is centred on: ${place}` : prompt,
     })
 
