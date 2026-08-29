@@ -94,3 +94,12 @@ describe('prompts about safety-critical maps', () => {
     expect(extractPlaceMentions('Semarang flood evacuation map').map((m) => m.text)).toEqual(['Semarang'])
   })
 })
+
+describe('Indonesian briefs', () => {
+  it('does not treat a sentence-initial imperative as a place', () => {
+    const mentions = extractPlaceMentions('Peta demo DPR Jakarta. Tandai titik kumpul dan pos medis.')
+    expect(mentions.map((mention) => mention.text)).toEqual(['DPR', 'Jakarta'])
+    // The qualifier must be the city, never the verb that follows the full stop.
+    expect(mentions[0].query).toBe('DPR Jakarta')
+  })
+})

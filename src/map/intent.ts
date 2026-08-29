@@ -9,6 +9,8 @@ export type Intent = {
   forPrompt: string
   /** The word in the prompt we think names the destination. */
   term?: string
+  /** The query that actually resolved, which is what callers should re-use. */
+  query?: string
   place?: GeocodedPlace
   categories: PlannedCategory[]
 }
@@ -38,14 +40,30 @@ const planCategories = async (prompt: string): Promise<PlannedCategory[]> => {
  * wrong city should be visible as text the user can read and correct, not
  * discovered later in a finished image.
  */
+/**
+ * Resolve a mention, falling back to the bare term.
+ *
+ * An acronym is qualified with the place named after it ("DPR" → "DPR
+ * Jakarta"), but that neighbour is only a guess: a stopword list will always
+ * have gaps, and a bad qualifier turns a findable place into a dead end. If the
+ * qualified form misses, try the word on its own before giving up.
+ */
+const resolveMention = async (mention: { text: string; query: string }) => {
+  const qualified = await geocodePlace(mention.query)
+  if (qualified.ok) return { place: qualified.place, query: mention.query }
+  if (mention.query === mention.text) return null
+  const bare = await geocodePlace(mention.text)
+  return bare.ok ? { place: bare.place, query: mention.text } : null
+}
+
 export const readIntent = async (prompt: string): Promise<Intent> => {
   const mention = extractPlaceMentions(prompt, 1)[0]
-  const [place, categories] = await Promise.all([
-    mention ? geocodePlace(mention.query) : Promise.resolve(null),
+  const [resolved, categories] = await Promise.all([
+    mention ? resolveMention(mention) : Promise.resolve(null),
     planCategories(prompt),
   ])
 
   if (!mention) return { status: 'no_place', forPrompt: prompt, categories }
-  if (!place || !place.ok) return { status: 'no_place', forPrompt: prompt, term: mention.text, categories }
-  return { status: 'ready', forPrompt: prompt, term: mention.text, place: place.place, categories }
+  if (!resolved) return { status: 'no_place', forPrompt: prompt, term: mention.text, categories }
+  return { status: 'ready', forPrompt: prompt, term: mention.text, query: resolved.query, place: resolved.place, categories }
 }

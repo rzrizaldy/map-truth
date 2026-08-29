@@ -47,6 +47,9 @@ const STOPWORDS = new Set([
   'delivery', 'logistics', 'coverage', 'service', 'venue', 'event', 'festival',
   'guide', 'infographic', 'diagram', 'layout', 'legend', 'key', 'title',
   'show', 'showing', 'include', 'including', 'mark', 'marking', 'label', 'labels',
+  // Indonesian imperatives and connectors, which a sentence break capitalises.
+  'tandai', 'tunjukkan', 'tampilkan', 'buat', 'buatkan', 'gambar', 'sertakan',
+  'titik', 'kumpul', 'pos', 'medis', 'rute', 'lokasi', 'dengan', 'serta',
 ])
 
 // Style words that look exactly like places. "A 1970s Swiss travel poster of

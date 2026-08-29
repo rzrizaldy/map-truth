@@ -39,7 +39,8 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
     if (arrivedAt.current === destination) return
     arrivedAt.current = destination
     setMoving(true)
-    void focusPlace({ place: intent.term ?? intent.place.name }).then(() => setMoving(false))
+    // Re-use the query that resolved, not the raw word, so the fly matches the read-back.
+    void focusPlace({ place: intent.query ?? intent.place.name }).then(() => setMoving(false))
   }, [mapReady, reading, intent])
 
   // Re-mark whenever the brief or the locked view changes.
