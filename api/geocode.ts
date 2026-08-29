@@ -1,8 +1,10 @@
 import type { GeocodedPlace } from '../src/map/placeTypes.js'
 
-export const config = { maxDuration: 30 }
+export const config = { maxDuration: 60 }
 
-type GeocodeRequest = { query?: unknown; center?: unknown; within?: unknown }
+type GeocodeRequest = { query?: unknown; queries?: unknown; center?: unknown; within?: unknown }
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 type NominatimPlace = {
   display_name?: string
@@ -99,9 +101,6 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const query = typeof body.query === 'string' ? body.query.trim().slice(0, 120) : ''
-  if (!query) return json({ error: 'query_required' }, { status: 400 })
-
   // `within` restricts the search to the locked viewport, which is how "DPR"
   // resolves to the parliament building in Jakarta instead of a road with the
   // same initials on another continent.
@@ -113,6 +112,32 @@ export async function POST(request: Request): Promise<Response> {
       bounded = `&viewbox=${west},${north},${east},${south}&bounded=1`
     }
   }
+
+  // Several names at once, resolved here rather than as parallel calls from the
+  // browser: Nominatim asks for at most one request a second, and a handful of
+  // simultaneous lookups earns a rate limit instead of answers.
+  if (Array.isArray(body.queries)) {
+    const queries = body.queries
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim().slice(0, 120))
+      .filter(Boolean)
+      .slice(0, 8)
+    const results: Array<{ query: string; place: GeocodedPlace | null }> = []
+    for (const [index, name] of queries.entries()) {
+      if (index > 0) await wait(1_100)
+      try {
+        const payload = (await nominatim(`/search?format=jsonv2&limit=1${bounded}&q=${encodeURIComponent(name)}`)) as NominatimPlace[]
+        const place = (Array.isArray(payload) ? payload : []).map(toGeocodedPlace).find((value) => value !== null) ?? null
+        results.push({ query: name, place })
+      } catch {
+        results.push({ query: name, place: null })
+      }
+    }
+    return json({ results })
+  }
+
+  const query = typeof body.query === 'string' ? body.query.trim().slice(0, 120) : ''
+  if (!query) return json({ error: 'query_required' }, { status: 400 })
 
   try {
     const payload = (await nominatim(`/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}${bounded}`)) as NominatimPlace[]

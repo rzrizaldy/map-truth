@@ -1,4 +1,4 @@
-import { lookupWithinViewport } from './geocode'
+import { lookupAllWithinViewport } from './geocode'
 import { addActivity, appStore } from '../state/store'
 
 export type NamedPlace = { name: string; label: string; center: [number, number] }
@@ -30,10 +30,8 @@ export const resolveNamedPlaces = async (names: string[]) => {
   }
 
   appStore.setState({ namedPlacesAsked: names.length, namedPlacesStatus: 'finding' })
-  const found = await Promise.all(names.map(async (name) => {
-    const place = await lookupWithinViewport(name, lock.bbox)
-    return place ? { name, label: place.label, center: place.center } : null
-  }))
+  const found = (await lookupAllWithinViewport(names, lock.bbox))
+    .map(({ query, place }) => (place ? { name: query, label: place.label, center: place.center } : null))
 
   // The viewport may have moved on while we waited.
   if (appStore.getState().data.lock?.bbox.join(',') !== lock.bbox.join(',')) return
