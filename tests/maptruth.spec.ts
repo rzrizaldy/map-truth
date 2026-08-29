@@ -29,12 +29,17 @@ const stubMarking = async (page: Page, categories: Array<{ key: string; label: s
   }))
 }
 
-const arrived = (page: Page) => expect(page.locator('.readback')).toContainText(JAKARTA.name, { timeout: 30_000 })
+/** Choose a place the way a visitor does: search, then pick a real result. */
+const pickPlace = async (page: Page, query = 'Jakarta') => {
+  await page.getByRole('searchbox', { name: 'Search for a place' }).fill(query)
+  // Only real results are buttons; the searching/empty rows are notes.
+  await page.locator('button.place-result').first().click()
+  await expect(page.locator('.place-chosen')).toContainText(JAKARTA.name, { timeout: 30_000 })
+}
 
-/** The stage auto-flies and locks; acting before that finishes races it. */
 const settled = async (page: Page) => {
-  await arrived(page)
-  await expect(page.locator('.map-meta')).toContainText('Using this view', { timeout: 30_000 })
+  await pickPlace(page)
+  await expect(page.locator('.readback')).toContainText('Grounded', { timeout: 30_000 })
 }
 
 const generate = async (page: Page) => {
@@ -45,6 +50,31 @@ const generate = async (page: Page) => {
   await expect(page.locator('.stepper .on')).toContainText('Compare')
 }
 
+test('nothing can be generated until a place is actually chosen', async ({ page }) => {
+  await stubPlace(page)
+  await stubMarking(page, [], [])
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+
+  // The guard that matters: no place, no grounding, no generation.
+  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeDisabled()
+  await expect(page.locator('.readback')).toContainText('Pick a place')
+})
+
+test('changing the place refuses to reuse the old lock', async ({ page }) => {
+  await stubPlace(page)
+  await stubMarking(page, [], [])
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await settled(page)
+  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeEnabled({ timeout: 30_000 })
+
+  // Regression: a stale lock once grounded a Bandung brief on Jakarta.
+  await page.getByRole('button', { name: 'Change' }).click()
+  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeDisabled()
+  await expect(page.locator('.readback')).toContainText('Pick a place')
+})
+
 test('the brief is read back before anything commits to it', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page,
@@ -53,44 +83,46 @@ test('the brief is read back before anything commits to it', async ({ page }) =>
 
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await settled(page)
 
   // What was understood is shown as text the user can read and correct.
-  await arrived(page)
-  await expect(page.locator('.readback')).toContainText('Medical')
+  await expect(page.locator('.readback')).toContainText(JAKARTA.name)
+  await expect(page.locator('.readback')).toContainText('Medical', { timeout: 25_000 })
 })
 
-test('the map goes where the brief says, without being told twice', async ({ page }) => {
+test('choosing a place locks that place and says so', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  await arrived(page)
+  await pickPlace(page)
 
-  // Flying is the read-back: the lock lands on the named place with no click.
   await expect(page.locator('.map-meta')).toContainText('Using this view', { timeout: 30_000 })
-  await expect(page.locator('.status-rail, .readback')).toContainText('OpenStreetMap shapes', { timeout: 20_000 })
+  await expect(page.locator('.readback')).toContainText('OpenStreetMap shapes', { timeout: 25_000 })
 })
 
-test('a brief that names nowhere says so instead of guessing', async ({ page }) => {
+test('a search that matches nothing says so', async ({ page }) => {
+  await page.route('**/api/geocode', (route) => route.fulfill({
+    status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'place_not_found' }),
+  }))
   await stubMarking(page, [], [])
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  await page.getByRole('textbox').fill('A bold poster with lots of colour')
-  await expect(page.locator('.readback-line--warn')).toContainText('No place named yet', { timeout: 20_000 })
-  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeDisabled()
+  await page.getByRole('searchbox', { name: 'Search for a place' }).fill('zzzzzzz')
+  await expect(page.locator('.place-note')).toContainText('Nothing on the map matches', { timeout: 20_000 })
 })
 
 test('the examples are one click and set a consistent state', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])
   await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await expect(page.locator('.example')).toHaveCount(3)
-  // The page opens on the first example, so it reads as selected.
-  await expect(page.locator('.example--on')).toHaveCount(1)
 
+  // An example sets both halves — the place and the brief — so it lands ready.
   await page.locator('.example', { hasText: 'Pittsburgh bike trail' }).click()
-  await expect(page.getByRole('textbox')).toHaveValue(/Pittsburgh bike trail/)
-  await expect(page.locator('.example--on')).toContainText('Pittsburgh')
+  await expect(page.getByRole('textbox')).toHaveValue(/Bike trail map/)
+  await expect(page.locator('.place-chosen')).toBeVisible({ timeout: 30_000 })
 })
 
 test('the brief decides what gets marked, OpenStreetMap decides where', async ({ page }) => {
@@ -123,7 +155,7 @@ test('the brief decides what gets marked, OpenStreetMap decides where', async ({
 
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  await arrived(page)
+  await settled(page)
 
   await expect(page.locator('.readback')).toContainText('Gathering point', { timeout: 25_000 })
   // Markers must land on the map itself, or they never reach the image model.
@@ -197,7 +229,7 @@ test('legacy /demo and /about links land on the same journey', async ({ page }) 
   await stubMarking(page, [], [])
   await page.goto('/about')
   await expect(page).toHaveURL(/\/(#.*)?$/)
-  await expect(page.getByRole('heading', { name: 'What map do you need?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Make a map that is actually there/ })).toBeVisible()
 })
 
 test('the header states whether an agent can drive the page', async ({ page }) => {
@@ -237,8 +269,11 @@ test('the agent drawer runs the real tools and stops at the cost gate', async ({
 
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await settled(page)
   await page.locator('.agent-toggle').click()
   await expect(page.locator('.drawer')).toBeVisible()
+  // The drawer showcases what an agent can call.
+  await expect(page.locator('.tool-list li')).toHaveCount(10)
 
   await page.getByRole('button', { name: /^Run the agent on / }).click()
   await expect(page.locator('.agent-step--done')).toHaveCount(6, { timeout: 120_000 })
@@ -260,9 +295,6 @@ test('an agent can navigate and lock through WebMCP alone', async ({ page }) => 
   await stubMarking(page, [], [])
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  // The stage flies to the brief's place on its own; driving the tools while
-  // that is in flight races two camera moves against each other.
-  await expect(page.locator('.map-meta')).toContainText('Using this view', { timeout: 30_000 })
 
   const call = (name: string, input: unknown) => page.evaluate(
     ([toolName, args]) => {
@@ -291,7 +323,8 @@ test('both stages stay usable on mobile', async ({ page }) => {
     status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'x' }),
   }))
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'What map do you need?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Make a map that is actually there/ })).toBeVisible()
+  await expect(page.getByRole('searchbox', { name: 'Search for a place' })).toBeVisible()
   await expect(page.locator('.ask-input')).toBeVisible()
   await expect(page.locator('.example')).toHaveCount(3)
 })

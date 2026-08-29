@@ -25,6 +25,12 @@ const postJson = async <T>(url: string, body: unknown): Promise<T | null> => {
   }
 }
 
+/** Ask which kinds of place a brief needs, without touching the map. */
+export const planOverlayCategories = async (prompt: string): Promise<PlannedCategory[]> => {
+  const payload = await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt })
+  return payload?.categories ?? []
+}
+
 let inFlight = ''
 
 /**

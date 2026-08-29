@@ -50,3 +50,14 @@ export const lookupWithinViewport = async (
   const outcome = await geocodePlace(query, within)
   return outcome.ok ? outcome.place : null
 }
+
+/** Live suggestions for a place search box. Never throws; empty means nothing. */
+export const searchPlaces = async (query: string): Promise<GeocodedPlace[]> => {
+  if (query.trim().length < 2) return []
+  try {
+    const payload = await post({ query: query.trim() })
+    return payload?.places ?? []
+  } catch {
+    return []
+  }
+}

@@ -3,6 +3,7 @@ import { SiteShell } from '../components/SiteShell'
 import { StageAsk } from '../components/StageAsk'
 import { StageCompare } from '../components/StageCompare'
 import { AgentWalkthrough } from '../components/AgentWalkthrough'
+import { AgentPanel } from '../components/AgentPanel'
 import { AgentReceiptRail, StatusRail } from '../components/StudioPanels'
 import { verifyOsmLock } from '../webmcp/commands'
 import { resetStudioState, useAppStore } from '../state/store'
@@ -37,12 +38,13 @@ export function StudioPage() {
       {showAgent ? (
         <div className="drawer" role="dialog" aria-label="Agent and provenance">
           <div className="drawer-head">
-            <strong>Agent &amp; provenance</strong>
+            <strong>WebMCP · 10 tools</strong>
             <button type="button" className="lightbox-close" onClick={() => setShowAgent(false)}>Close ✕</button>
           </div>
           <div className="drawer-body">
-            <StatusRail />
+            <AgentPanel />
             <AgentWalkthrough />
+            <StatusRail />
             <div className="demo-toolbar">
               <button className="button button--small" type="button" onClick={() => void verifyOsmLock()} disabled={!data.lock || data.verificationStatus === 'verifying'}>
                 {data.verificationStatus === 'verifying' ? 'Checking…' : 'Double-check against OpenStreetMap'}

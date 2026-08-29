@@ -21,7 +21,8 @@ main { max-width: none; margin: 0; padding: 0; }
 .stage { min-height: 0; overflow: hidden; }
 .stage--ask { display: grid; grid-template-columns: minmax(360px, 34%) 1fr; }
 .ask-panel { padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--surface); }
-.ask-panel h1 { margin: 0; font: 600 clamp(26px, 2.4vw, 34px)/1.1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+.ask-intro { display: grid; gap: 6px; }
+.ask-panel h1 { margin: 0; font: 600 clamp(24px, 2.1vw, 30px)/1.1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
 .stage-lead { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .ask-input { width: 100%; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.5; }
 .ask-map { position: relative; min-width: 0; }
@@ -208,6 +209,34 @@ main { max-width: none; margin: 0; padding: 0; }
 .lightbox-stage .taste-example { height: 100%; display: grid; place-items: center; }
 .lightbox-stage .taste-example img { height: 100%; }
 .lightbox-stage .taste-example-tag { display: none; }
+
+/* ---- place search ---- */
+.field { display: grid; gap: 8px; }
+.field-label { font: 600 12px/1 'IBM Plex Mono', monospace; color: var(--blue); letter-spacing: .04em; text-transform: uppercase; }
+.place-search { position: relative; }
+.place-input { width: 100%; height: 46px; border: 1px solid var(--line); border-radius: 10px; padding: 0 14px; background: var(--paper); font-size: 15px; }
+.place-results { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); max-height: 260px; overflow-y: auto; }
+.place-result { display: grid; gap: 1px; width: 100%; text-align: left; border: 0; border-radius: 8px; background: transparent; padding: 8px 10px; cursor: pointer; }
+.place-result:hover { background: var(--blue-soft); }
+.place-result strong { font: 600 14px/1.3 'Source Sans 3', sans-serif; }
+.place-result small { color: var(--muted); font-size: 12px; }
+.place-note { color: var(--muted); font-size: 13px; padding: 10px; }
+.place-chosen { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--green); border-radius: 10px; background: #e6f4ea; }
+.place-chosen > div { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.place-chosen strong { font: 600 14px/1.3 'Source Sans 3', sans-serif; }
+.place-chosen small { color: #137333; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-chosen-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); flex: 0 0 auto; }
+.place-chosen button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--blue); padding: 6px 11px; cursor: pointer; font: 600 12px/1 'Source Sans 3', sans-serif; }
+
+/* ---- agent panel ---- */
+.agent-panel { display: grid; gap: 12px; }
+.agent-state { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.agent-state--on { background: #e6f4ea; color: #137333; }
+.agent-state--off { background: var(--paper); color: var(--muted); }
+.tool-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: tool; }
+.tool-list li { display: grid; grid-template-columns: 180px 1fr; gap: 10px; align-items: baseline; padding: 6px 10px; border-radius: 6px; background: var(--paper); }
+.tool-list code { font: 600 12px/1.4 'IBM Plex Mono', monospace; color: var(--blue-dark); }
+.tool-list span { color: var(--muted); font-size: 13px; line-height: 1.4; }
 
 /* ---- agent walkthrough ---- */
 .agent-demo { margin-top: 20px; padding: 18px 20px; border: 1px solid var(--blue); border-radius: 12px; background: var(--blue-soft); }
