@@ -45,14 +45,15 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   // Re-mark whenever the brief or the locked view changes.
   const lockId = data.lock?.id
+  const planned = intent.status === 'ready' ? intent.categories : undefined
   useEffect(() => {
-    if (!lockId) return
+    if (!lockId || !planned) return
     const timer = window.setTimeout(() => {
       void syncTruthPins()
-      void syncOverlays()
+      void syncOverlays(planned)
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [lockId, prompt])
+  }, [lockId, prompt, planned])
 
   const marking = overlayStatus === 'planning' || overlayStatus === 'finding'
   const ready = Boolean(data.lock) && !moving && !marking && !reading

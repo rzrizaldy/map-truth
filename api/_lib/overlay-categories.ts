@@ -9,8 +9,11 @@ export const OVERLAY_CATEGORIES = {
   gathering_point: {
     label: 'Gathering point',
     colour: '#1a73e8',
-    describe: 'open space where a crowd can assemble — squares, plazas, commons',
-    filters: ['["place"="square"]', '["leisure"="common"]', '["highway"="pedestrian"]'],
+    describe: 'open space where a crowd can assemble — parks, squares, plazas, commons',
+    // Parks belong here as well as in their own category: in most cities the
+    // place a crowd actually gathers is a park, and dropping them left protest
+    // briefs with nowhere to point.
+    filters: ['["leisure"="park"]', '["place"="square"]', '["leisure"="common"]', '["highway"="pedestrian"]'],
   },
   landmark: {
     label: 'Landmark',

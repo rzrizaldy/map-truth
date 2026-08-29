@@ -36,7 +36,7 @@ let inFlight = ''
  * the difference between a poster with real medical posts on it and a poster
  * with plausible ones.
  */
-export const syncOverlays = async () => {
+export const syncOverlays = async (planned?: PlannedCategory[]) => {
   const state = appStore.getState()
   const lock = state.data.lock
   if (!lock) return
@@ -46,8 +46,11 @@ export const syncOverlays = async () => {
   inFlight = key
   appStore.setState({ overlayStatus: 'planning' })
 
-  const plan = await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt: state.ai.prompt })
-  const categories = plan?.categories ?? []
+  // The read-back already planned this brief. Re-planning here would spend a
+  // second model call, and latency, to learn the same thing.
+  const categories = planned
+    ?? (await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt: state.ai.prompt }))?.categories
+    ?? []
   if (!categories.length) {
     appStore.setState({ overlays: [], overlayCategories: [], overlayStatus: 'idle' })
     return
