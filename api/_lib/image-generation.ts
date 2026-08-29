@@ -15,6 +15,8 @@ export type GenerateRouteInput = {
   prompt: string
   sourceImageDataUrl?: string
   mapSummary?: string
+  /** How many verified places the capture carries. Zero forbids naming any. */
+  markerCount?: number
 }
 
 export const isImageRoute = (value: unknown): value is ImageRoute =>
@@ -23,10 +25,21 @@ export const isImageRoute = (value: unknown): value is ImageRoute =>
 export const validSourceImageDataUrl = (value: string | undefined) =>
   Boolean(value && /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/]+=*$/i.test(value) && value.length <= 3_500_000)
 
-const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary }: GenerateRouteInput) => {
+const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary, markerCount = 0 }: GenerateRouteInput) => {
   if (route === 'promptOnly') {
     return `${prompt}\nCreate a complete polished 2:3 map poster from the brief alone. Make your own visual and geographic decisions.`
   }
+
+  // With no verified markers there is nothing to name, and an unconstrained
+  // model fills that space with a plausible legend of places it invented —
+  // which is the exact failure this route exists to avoid.
+  const aboutMarkers = markerCount > 0
+    ? 'The coloured dots are real, verified locations: keep their positions, use their names, and build the '
+      + 'legend from them. Do not add markers of your own.'
+    : 'There are no verified locations for this brief, so the poster must not name or pin any individual '
+      + 'venue, business or point of interest, and must not include a legend or numbered list of places. '
+      + 'Title it, and show only the streets, water and green space visible in the attached map.'
+
   return {
     text:
       `${prompt}\n` +
@@ -34,9 +47,7 @@ const promptForRoute = ({ route, prompt, sourceImageDataUrl, mapSummary }: Gener
       `captured live${mapSummary ? ` (${mapSummary})` : ''}. ` +
       'Redraw it as a polished 2:3 poster. Follow the real street layout, coastlines, waterways and ' +
       'green space as closely as you can, and keep every marker exactly where it sits on the attached map. ' +
-      'The coloured dots are real, verified locations: keep their positions, use their names, and build the ' +
-      'legend from them. Do not add markers of your own, and do not invent streets, districts or landmarks ' +
-      'that are not visible in the attached map.',
+      `${aboutMarkers} Do not invent streets, districts or landmarks that are not visible in the attached map.`,
     images: [sourceImageDataUrl!],
   }
 }

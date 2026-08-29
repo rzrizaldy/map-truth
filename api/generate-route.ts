@@ -13,6 +13,7 @@ type RouteRequest = {
   prompt?: unknown
   sourceImageDataUrl?: unknown
   mapSummary?: unknown
+  markerCount?: unknown
 }
 
 const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
@@ -41,7 +42,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const startedAt = Date.now()
   try {
-    const image = await generateRouteImage({ route: body.route, prompt, sourceImageDataUrl, mapSummary })
+    const markerCount = Number.isFinite(Number(body.markerCount)) ? Math.max(0, Math.trunc(Number(body.markerCount))) : 0
+    const image = await generateRouteImage({ route: body.route, prompt, sourceImageDataUrl, mapSummary, markerCount })
     return json({ route: body.route, model: IMAGE_MODEL_LABEL, image, durationMs: Date.now() - startedAt })
   } catch (error) {
     const detail = imageGenerationError(error)

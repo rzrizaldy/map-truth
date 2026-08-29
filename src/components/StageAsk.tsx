@@ -82,13 +82,15 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   // Mark once we have both a place and a plan for it.
   const lockId = data.lock?.id
   useEffect(() => {
-    if (!lockId || !lockedHere) return
+    // Waiting for the plan matters: marking with an empty one clears the map
+    // and, worse, leaves the image model a bare map to invent places onto.
+    if (!lockId || !lockedHere || planning) return
     const timer = window.setTimeout(() => {
       void syncTruthPins()
       void syncOverlays(planned)
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [lockId, lockedHere, planned])
+  }, [lockId, lockedHere, planning, planned])
 
   const marking = overlayStatus === 'planning' || overlayStatus === 'finding'
   const ready = lockedHere && !moving && !marking && !planning && Boolean(prompt.trim())

@@ -47,17 +47,21 @@ export const syncOverlays = async (planned?: PlannedCategory[]) => {
   const lock = state.data.lock
   if (!lock) return
 
-  const key = `${state.ai.prompt}|${lock.bbox.join(',')}`
+  // The plan is part of the identity of a run. Keying on brief and viewport
+  // alone meant a first pass that ran before the plan arrived — and so marked
+  // nothing — blocked the real pass that followed it.
+  const key = `${state.ai.prompt}|${lock.bbox.join(',')}|${(planned ?? []).map((c) => c.key).join('+')}`
   if (inFlight === key) return
   inFlight = key
   appStore.setState({ overlayStatus: 'planning' })
 
   // The read-back already planned this brief. Re-planning here would spend a
   // second model call, and latency, to learn the same thing.
-  const categories = planned
-    ?? (await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt: state.ai.prompt }))?.categories
-    ?? []
+  const categories = planned?.length
+    ? planned
+    : (await postJson<{ categories?: PlannedCategory[] }>('/api/plan-overlays', { prompt: state.ai.prompt }))?.categories ?? []
   if (!categories.length) {
+    inFlight = ''
     appStore.setState({ overlays: [], overlayCategories: [], overlayStatus: 'idle' })
     return
   }
