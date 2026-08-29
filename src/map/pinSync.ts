@@ -1,35 +1,25 @@
-import { lookupWithinViewport } from './geocode'
-import { resolveTruthPins } from './truthPins'
 import { addActivity, appStore } from '../state/store'
 
 let inFlight = ''
 
 /**
- * Resolve the prompt's named things against OpenStreetMap and pin them.
+ * Pin the subject of the map: the place that was chosen.
  *
- * Runs after a lock and on prompt changes, debounced by the caller. Failures
- * are silent by design: a missing pin must never block generation, and an
- * unfound term simply means the brief did not name anything real here.
+ * It used to also scan the brief for capitalised words and pin whatever
+ * OpenStreetMap returned for them, which put a pin labelled "Cafe" on a random
+ * cafe two districts away from "Cafe terbaik di Bandung". The place is now
+ * picked explicitly, so there is nothing left to guess — what the brief asks
+ * the map to *show* is handled by marking, against a closed vocabulary.
  */
 export const syncTruthPins = async () => {
   const state = appStore.getState()
   if (!state.data.lock) return
   const bbox = state.data.lock.bbox
-  const key = `${state.ai.prompt}|${bbox.join(',')}`
+  const key = `${state.place.label ?? state.place.name}|${bbox.join(',')}`
   if (inFlight === key) return
   inFlight = key
 
-  const found = await resolveTruthPins(
-    state.ai.prompt,
-    [state.place.name, state.place.label, state.place.query],
-    bbox,
-    lookupWithinViewport,
-  )
-
-  // A place reached by name is the subject of the brief, so mark it even though
-  // it is also the map's centre — otherwise asking for the DPR building centres
-  // on it and then leaves it unlabelled.
-  const focused = state.place.source === 'geocoded' && state.place.center
+  const pins = state.place.source === 'geocoded' && state.place.center
     ? [{
         term: state.place.query ?? state.place.name,
         name: state.place.name,
@@ -37,15 +27,12 @@ export const syncTruthPins = async () => {
         center: state.place.center,
       }]
     : []
-  const seen = new Set(focused.map((pin) => pin.name.toLowerCase()))
-  const pins = [...focused, ...found.filter((pin) => !seen.has(pin.name.toLowerCase()))]
 
   // The viewport may have moved on while we were waiting.
   if (appStore.getState().data.lock?.bbox.join(',') !== bbox.join(',')) return
   appStore.setState({ truthPins: pins })
   if (pins.length) {
-    addActivity('find_in_osm', 'ok',
-      `Found in OpenStreetMap: ${pins.map((pin) => pin.name).join(', ')}`, { source: 'system' })
+    addActivity('find_in_osm', 'ok', `Subject pinned from OpenStreetMap: ${pins[0].name}`, { source: 'system' })
   }
 }
 

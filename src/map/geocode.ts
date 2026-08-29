@@ -43,15 +43,6 @@ export const describeViewport = async (center: [number, number]): Promise<Geocod
 }
 
 /** Look a term up strictly inside the locked viewport. Never throws. */
-export const lookupWithinViewport = async (
-  query: string,
-  within: [number, number, number, number],
-): Promise<GeocodedPlace | null> => {
-  const outcome = await geocodePlace(query, within)
-  return outcome.ok ? outcome.place : null
-}
-
-/** Live suggestions for a place search box. Never throws; empty means nothing. */
 export const searchPlaces = async (query: string): Promise<GeocodedPlace[]> => {
   if (query.trim().length < 2) return []
   try {
