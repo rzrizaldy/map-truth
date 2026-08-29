@@ -58,6 +58,7 @@ export async function POST(request: Request): Promise<Response> {
   if (west >= east || south >= north) return json({ error: 'invalid_bbox' }, { status: 400 })
   if (east - west > 0.6 || north - south > 0.6) return json({ error: 'bbox_too_large' }, { status: 400 })
 
+  const [cx, cy] = [(west + east) / 2, (south + north) / 2]
   const categories = (Array.isArray(body.categories) ? body.categories : [])
     .filter(isOverlayCategory)
     .slice(0, 4) as OverlayCategory[]
@@ -76,7 +77,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!response.ok) return json({ markers: [], error: 'overpass_failed', detail: `HTTP ${response.status}` })
 
     const payload = (await response.json()) as { elements?: Element[] }
-    const perCategory = new Map<OverlayCategory, Array<OverlayMarker & { notable: boolean }>>()
+    const perCategory = new Map<OverlayCategory, Array<OverlayMarker & { notable: boolean; distance: number }>>()
     const seen = new Set<string>()
 
     for (const element of payload.elements ?? []) {
@@ -104,6 +105,11 @@ export async function POST(request: Request): Promise<Response> {
         // link is a fair proxy: it is how "iconic landmarks" surfaces the
         // Statue of Liberty rather than the nearest fire-department museum.
         notable: Boolean(tags.wikidata ?? tags.wikipedia),
+        // Squared distance from the middle of the locked view. Chasing tag
+        // combinations to find "iconic" is endless and city-specific; what
+        // reliably matters is that a marker is near the thing being mapped,
+        // which also keeps a Jakarta brief from marking the next town over.
+        distance: (longitude - cx) ** 2 + (latitude - cy) ** 2,
         osmId: `osm:${element.type[0]}${element.id}`,
       })
       perCategory.set(category, bucket)
@@ -112,9 +118,9 @@ export async function POST(request: Request): Promise<Response> {
     // Keep the requested order so the most important category renders first.
     return json({
       markers: categories.flatMap((key) => (perCategory.get(key) ?? [])
-        .sort((a, b) => Number(b.notable) - Number(a.notable))
+        .sort((a, b) => Number(b.notable) - Number(a.notable) || a.distance - b.distance)
         .slice(0, PER_CATEGORY)
-        .map(({ notable: _notable, ...marker }) => marker)),
+        .map(({ notable: _notable, distance: _distance, ...marker }) => marker)),
     })
   } catch (error) {
     return json({ markers: [], error: 'overpass_failed', detail: error instanceof Error ? error.message : 'unknown' })
