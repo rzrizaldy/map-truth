@@ -22,8 +22,9 @@ const model = () => (process.env.OPENAI_API_KEY
  * Decide which kinds of real place a brief is asking to see.
  *
  * Deliberately a closed vocabulary: the model reasons about intent and nothing
- * else. It never returns coordinates, names or queries, so it cannot smuggle an
- * invented location past the OpenStreetMap lookup that follows.
+ * else. It never returns coordinates or queries, so it cannot smuggle an
+ * invented location past the OpenStreetMap lookup that follows. Suggested
+ * names are treated only as search terms and disappear unless OSM resolves them.
  */
 export async function POST(request: Request): Promise<Response> {
   let body: { prompt?: unknown; place?: unknown }
@@ -48,11 +49,11 @@ export async function POST(request: Request): Promise<Response> {
         'Pick only what the brief genuinely asks for or clearly implies; [] if nothing fits.\n\n' +
         'places — if the brief asks for the best, the most famous, the most iconic, or a ' +
         'numbered pick of anything ("7 spot pilihan", "top cafes", "must-see landmarks"), ' +
-        'then name the specific real ones you know in this area, up to eight, written the ' +
-        'way they are commonly signed or listed locally. This is the part you are for: ' +
-        'OpenStreetMap can say what exists but not what is famous, so if you know the area ' +
-        'at all, name them. Every name is looked up in OpenStreetMap and dropped if it is ' +
-        'not there, so a wrong guess costs nothing and an omission costs the whole answer. ' +
+        'then name only the specific real ones you know with high confidence in this area, ' +
+        'up to eight, written exactly the way they are commonly signed or listed locally. ' +
+        'Never invent, translate, or fill the quota with uncertain names; fewer confident ' +
+        'suggestions are better. OpenStreetMap can say what exists but not what is famous. ' +
+        'Every suggestion is still looked up there and dropped if it cannot be resolved. ' +
         'Return [] only when the brief asks for a kind of place in general rather than ' +
         'particular ones.',
       prompt: place ? `${prompt}\n\nThe map is centred on: ${place}` : prompt,

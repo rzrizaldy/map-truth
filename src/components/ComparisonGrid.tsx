@@ -16,7 +16,7 @@ const exampleImage: Record<ComparisonRoute, string> = {
 
 const routeCopy: Record<ComparisonRoute, { number: string; title: string; description: string; risk: string; riskClass: string }> = {
   promptOnly: { number: 'WITHOUT', title: 'No map', description: 'The AI never saw one. It invents a city that does not exist.', risk: 'Not a real place', riskClass: 'high' },
-  screenshotGrounded: { number: 'WITH', title: 'Grounded by WebMCP', description: 'The agent found the place, locked it, and handed over the real map.', risk: 'Real place', riskClass: 'locked' },
+  screenshotGrounded: { number: 'WITH', title: 'Grounded by WebMCP', description: 'The agent found the place, locked its source map, and handed that evidence to the image model.', risk: 'Sourced place', riskClass: 'locked' },
 }
 
 function RouteProgress({ route, state }: { route: ComparisonRoute; state: GenerationRouteState }) {
@@ -91,20 +91,30 @@ export function ComparisonGrid() {
         {(Object.keys(routeCopy) as ComparisonRoute[]).map((route) => {
           const copy = routeCopy[route]
           const state = ai.routes[route]
+          const canZoom = state.status === 'idle' || (state.status === 'ready' && Boolean(state.imageDataUrl))
           return (
             <article className={`taste-card ${route === 'screenshotGrounded' ? 'taste-card--truth' : ''}`} key={route}>
               <div className="taste-number">{copy.number}</div>
               <h3>{copy.title}</h3>
-              <p>{route === 'screenshotGrounded' && locked ? `Grounded on the real map of ${placeName}.` : copy.description}</p>
-              <button
-                type="button"
+              <p>{route === 'screenshotGrounded' && locked ? `Redrawn from a locked source map of ${placeName}.` : copy.description}</p>
+              <div
                 className="taste-visual taste-visual--zoom"
-                onClick={() => setZoomed(route)}
-                aria-label={`View ${copy.title} full screen`}
+                onClick={(event) => {
+                  if (!(event.target as HTMLElement).closest('button')) setZoomed(route)
+                }}
               >
                 <ResultVisual route={route} state={state} />
-                <span className="taste-zoom-hint" aria-hidden="true">⤢</span>
-              </button>
+                {canZoom ? (
+                  <button
+                    type="button"
+                    className="taste-zoom-hit"
+                    onClick={() => setZoomed(route)}
+                    aria-label={`View ${copy.title} full screen`}
+                  >
+                    <span className="taste-zoom-hint" aria-hidden="true">⤢</span>
+                  </button>
+                ) : null}
+              </div>
               <Provenance route={route} />
               <div className="card-status-row">
                 <span className={`risk-tag risk-tag--${copy.riskClass}`}>{copy.risk}</span>

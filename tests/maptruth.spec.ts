@@ -235,7 +235,7 @@ test('generating advances to the comparison and back', async ({ page }) => {
   await expect(page.locator('.stepper .on')).toContainText('Ask')
 })
 
-test('the grounded result states a source anyone can check', async ({ page }) => {
+test('the grounded result states what is sourced and what is still a redraw', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])
   await page.route('**/api/generate-route', (route) => route.fulfill({
@@ -249,7 +249,8 @@ test('the grounded result states a source anyone can check', async ({ page }) =>
   const cards = page.locator('.taste-card')
   await expect(cards.first().locator('.provenance--none')).toContainText('invented by the model')
   const grounded = cards.nth(1).locator('.provenance')
-  await expect(grounded).toContainText('OpenStreetMap shapes verified')
+  await expect(grounded).toContainText('OSM-derived source shapes locked')
+  await expect(grounded).toContainText('generated pixels are a redraw')
   await expect(grounded.getByRole('link', { name: /Check on OpenStreetMap/ }))
     .toHaveAttribute('href', /openstreetmap\.org\/#map=16\/-?\d+\.\d+\/-?\d+\.\d+/)
 })
@@ -270,10 +271,21 @@ test('a result opens full screen and closes again', async ({ page }) => {
   await expect(page.locator('.lightbox')).toHaveCount(0)
 })
 
-test('legacy /demo and /about links land on the same journey', async ({ page }) => {
+test('the About route explains the architecture and truth boundary', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])
   await page.goto('/about')
+  await expect(page).toHaveURL(/\/about$/)
+  await expect(page.getByRole('heading', { name: /A model can style evidence/ })).toBeVisible()
+  await expect(page.locator('#architecture')).toContainText('Names, never coordinates')
+  await expect(page.locator('#truth-contract')).toContainText('generated pixels are cartographically exact')
+  await expect(page.locator('.tool-card')).toHaveCount(10)
+})
+
+test('the legacy /demo link still lands on the studio', async ({ page }) => {
+  await stubPlace(page)
+  await stubMarking(page, [], [])
+  await page.goto('/demo')
   await expect(page).toHaveURL(/\/(#.*)?$/)
   await expect(page.getByRole('heading', { name: /Make a map that is actually there/ })).toBeVisible()
 })

@@ -104,8 +104,8 @@ export const registerMapTruthTools = async (): Promise<() => void> => {
         execute: () => verifyGeography(),
       }, { signal: controller.signal }),
       document.modelContext.registerTool({
-        name: 'export_artwork', title: 'Export attributed artwork',
-        description: 'Download a generated image. Defaults to the map-grounded one, which carries OpenStreetMap attribution.',
+        name: 'export_artwork', title: 'Export generated artwork',
+        description: 'Download a completed generated image. Defaults to the grounded route; its inspectable source provenance remains visible in the page.',
         inputSchema: EXPORT_ARTWORK_SCHEMA,
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         execute: (input) => exportGroundedArtwork(input as { route?: unknown }),

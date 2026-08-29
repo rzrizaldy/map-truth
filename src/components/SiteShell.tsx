@@ -7,13 +7,23 @@ type SiteShellProps = {
   stage?: 'ask' | 'compare'
   onAgent?: () => void
   agentOpen?: boolean
+  documentPage?: boolean
 }
 
-export function SiteShell({ children, headerCode = 'WEBMCP', stage, onAgent, agentOpen }: SiteShellProps) {
+export function SiteShell({ children, headerCode = 'WEBMCP', stage, onAgent, agentOpen, documentPage = false }: SiteShellProps) {
   return (
-    <main className="app">
+    <main className={`app ${documentPage ? 'app--document' : ''}`}>
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="MapTruth home"><span>Map</span>Truth</a>
+        <div className="header-brand">
+          <a className="wordmark" href="/" aria-label="MapTruth studio">
+            <img src="/brand/maptruth-mark.png" alt="" aria-hidden="true" />
+            <span><b>Map</b>Truth</span>
+          </a>
+          <nav className="primary-nav" aria-label="Primary navigation">
+            <a href="/">Studio</a>
+            <a href="/about">About + architecture</a>
+          </nav>
+        </div>
         {stage ? (
           <nav className="stepper" aria-label="Progress">
             <span className={stage === 'ask' ? 'on' : 'done'}>1 · Ask</span>
@@ -30,7 +40,10 @@ export function SiteShell({ children, headerCode = 'WEBMCP', stage, onAgent, age
       {children}
       <footer>
         <span>Map data © OpenStreetMap contributors · ODbL 1.0</span>
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Attribution</a>
+        <span className="footer-links">
+          <a href="/about#truth-contract">Truth contract</a>
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Attribution</a>
+        </span>
       </footer>
     </main>
   )

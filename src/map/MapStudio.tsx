@@ -356,7 +356,14 @@ export function MapStudio() {
     }
 
     const unregisterRuntime = registerMapRuntime({
-      capture: () => captureMapScreenshot(map),
+      capture: async () => {
+        // Marker state can settle immediately before the generate click. Give
+        // MapLibre a full paint boundary so the pixels and markerCount describe
+        // the same frame handed to the image model.
+        map.triggerRepaint()
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())))
+        return captureMapScreenshot(map)
+      },
       lockLiveOsm,
       navigate: async (center, zoom) => {
         invalidateOnMoveEnd = true
@@ -500,7 +507,8 @@ export function MapStudio() {
           },
         })),
       }),
-      // Set only once painted, so it reports what the capture will contain.
+      // Set only once the map source accepts the data. Capture then waits for a
+      // complete paint boundary before reading the canvas.
       () => { if (containerRef.current) containerRef.current.dataset.overlayMarkers = String(overlays.length) },
     )
   }, [overlays])
@@ -552,7 +560,7 @@ export function MapStudio() {
     <div className="map-shell map-shell--demo">
       <div className="map-meta">
         <span>{metaLabel}</span>
-        <strong>{data.features.length ? `${data.features.length.toLocaleString()} real shapes` : 'Drag to explore'}</strong>
+        <strong>{data.features.length ? `${data.features.length.toLocaleString()} sourced shapes` : 'Drag to explore'}</strong>
         <span>{data.lock ? '' : 'nothing picked yet'}</span>
       </div>
       <div ref={containerRef} className="map-canvas" aria-label="Interactive worldwide OpenStreetMap vector map" />

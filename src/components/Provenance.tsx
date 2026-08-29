@@ -42,13 +42,18 @@ export function Provenance({ route }: { route: ComparisonRoute }) {
   ]
   const osmUrl = `https://www.openstreetmap.org/#map=16/${centre[1].toFixed(5)}/${centre[0].toFixed(5)}`
 
+  const sourceClaim = lock.kind === 'verified'
+    ? `${featureCount.toLocaleString()} canonical OSM shapes verified`
+    : `${featureCount.toLocaleString()} OSM-derived source shapes locked`
+
   return (
     <div className="provenance">
       <span className="provenance-dot provenance-dot--ok" aria-hidden="true" />
       <div className="provenance-facts">
         <strong>{pins[0]?.name ?? place.name}</strong>
         <code>{format(centre)}</code>
-        <span>{featureCount.toLocaleString()} OpenStreetMap shapes verified</span>
+        <span>{sourceClaim}</span>
+        <small>Source map verified · generated pixels are a redraw</small>
       </div>
       <a className="provenance-check" href={osmUrl} target="_blank" rel="noreferrer">
         Check on OpenStreetMap ↗

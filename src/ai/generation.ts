@@ -1,7 +1,7 @@
 import { getMapRuntime } from '../map/runtime'
 import { addActivity, appStore } from '../state/store'
 import { captureUndo } from '../state/history'
-import type { ComparisonRoute, ToolResult } from '../types/maptruth'
+import type { ComparisonRoute, MapTruthState, ToolResult } from '../types/maptruth'
 
 const ROUTES: ComparisonRoute[] = ['promptOnly', 'screenshotGrounded']
 const controllers = new Map<ComparisonRoute, AbortController>()
@@ -32,6 +32,21 @@ const compactMapSummary = () => {
   })
 }
 
+/** Every marker source is painted into the captured map on its own layer. */
+export const visibleMarkerCount = (state: Pick<MapTruthState, 'truthPins' | 'overlays' | 'namedPlaces'>) =>
+  state.truthPins.length + state.overlays.length + state.namedPlaces.length
+
+export const generationRequestPayload = (route: ComparisonRoute, screenshot?: string) => {
+  const state = appStore.getState()
+  return {
+    route,
+    prompt: state.ai.prompt,
+    sourceImageDataUrl: screenshot,
+    mapSummary: route === 'screenshotGrounded' ? compactMapSummary() : undefined,
+    markerCount: route === 'screenshotGrounded' ? visibleMarkerCount(state) : 0,
+  }
+}
+
 const setRoute = (route: ComparisonRoute, patch: Record<string, unknown>) => {
   appStore.setState((state) => ({
     ai: { ...state.ai, routes: { ...state.ai.routes, [route]: { ...state.ai.routes[route], ...patch } } },
@@ -50,7 +65,7 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
   let screenshot: string | undefined
   if (route !== 'promptOnly') {
     try {
-      screenshot = runtime.capture()
+      screenshot = await runtime.capture()
     } catch {
       return { status: 'needs_user_action', reason: 'map_not_ready', suggestedAction: 'wait_for_map' }
     }
@@ -68,12 +83,7 @@ export const runGenerationRoute = async (route: ComparisonRoute, source: 'manual
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
-      body: JSON.stringify({
-        route,
-        prompt: appStore.getState().ai.prompt,
-        sourceImageDataUrl: screenshot,
-        mapSummary: route === 'screenshotGrounded' ? compactMapSummary() : undefined,
-      }),
+      body: JSON.stringify(generationRequestPayload(route, screenshot)),
     })
     const responseText = await response.text()
     let payload: { image?: string; error?: string; detail?: string; durationMs?: number } = {}

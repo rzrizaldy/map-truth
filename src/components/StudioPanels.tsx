@@ -24,7 +24,7 @@ export function StatusRail() {
       <div><span className="status-dot" /> {label}</div>
       <strong>{data.lock ? place.name : mapReady ? 'Ready' : ''}</strong>
       <span>{data.lock
-        ? `${data.features.length.toLocaleString()} real streets, parks and waterways`
+        ? `${data.features.length.toLocaleString()} OSM-derived streets, parks and waterways in this view`
         : 'Drag to somewhere you know, then keep the view'}</span>
       <span className={`agent-mode agent-mode--${webmcp.webmcpStatus}`}>{webmcp.webmcpAvailable ? 'Agent mode · 10 tools' : 'Manual mode'}</span>
     </div>

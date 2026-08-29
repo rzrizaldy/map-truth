@@ -2,14 +2,14 @@
 
 ## Mission
 
-Keep the three-level comparison honest, and keep level 3 provably tied to live OSM geometry.
+Keep the two-route comparison honest, and keep the grounded route provably tied to live OSM-derived source geometry.
 
 ## Route contract
 
 | Route | Evidence | Geographic claim |
 |---|---|---|
 | `promptOnly` | The brief alone | Invented |
-| `screenshotGrounded` | Brief + a live, located, pinned OpenStreetMap capture, plus a compact lock summary | The real place |
+| `screenshotGrounded` | Brief + a live, located, pinned OpenStreetMap capture, plus a compact lock summary | A redraw sourced from the real place |
 
 Both run independently through `POST /api/generate-route`, report
 `idle | awaiting_approval | queued | generating | ready | error | cancelled`,
@@ -23,6 +23,10 @@ preserve partial success, and support focused retry.
   model — pins especially — has to be drawn on the live map before capture.
 - Its prompt must tell the model to follow the attached map and not invent
   streets, districts or landmarks that are not visible in it.
+- `markerCount` must include every marker layer painted into the capture: the
+  subject pin, category overlays, and OSM-resolved named places.
+- Verify the source capture and provenance. Never describe generated pixels as
+  cartographically exact or themselves verified.
 - Manual and WebMCP actions must call the same command functions.
 - WebMCP generation stages requests and waits for visible human approval.
 - Preserve OSM attribution in both cards.
@@ -58,4 +62,4 @@ Google Maps palette: surface `#FFFFFF` on `#F8F9FA`, text `#202124`, secondary `
 - Cancellation copy states that the provider request may still finish server-side.
 - Pins appear on the live map, so they survive into the capture.
 - Manual mode works without `document.modelContext`.
-- Connected Chrome is not reported as WebMCP-complete until it discovers and executes all eight tools.
+- Connected Chrome is not reported as WebMCP-complete until it discovers all ten tools. Page scripts cannot execute a browser-owned `RegisteredTool`; execution is covered through the same command functions in the walkthrough and Playwright.

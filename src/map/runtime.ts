@@ -1,7 +1,7 @@
 import type { ToolResult } from '../types/maptruth'
 
 export type MapRuntime = {
-  capture: () => string
+  capture: () => string | Promise<string>
   lockLiveOsm: (source?: 'manual' | 'webmcp') => Promise<ToolResult>
   navigate: (center: [number, number], zoom: number) => Promise<void>
 }
