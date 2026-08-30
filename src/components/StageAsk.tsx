@@ -114,7 +114,27 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   // of the markers the brief asked for. Wait for a settled result instead.
   const markingSettled = !planned.length || overlayStatus === 'ready' || overlayStatus === 'error'
   const namingSettled = !suggested.length || namedStatus === 'ready'
-  const ready = lockedHere && !moving && !planning && markingSettled && namingSettled && Boolean(prompt.trim())
+
+  // Marking depends on a public Overpass instance that sheds load without
+  // warning. The map itself does not need it — the geometry comes from the
+  // vector tiles — so waiting past a point holds the whole demo hostage to
+  // somebody else's server. Past the deadline we go on without the markers,
+  // and the request is told there are none, which it already handles by
+  // refusing to name any place it cannot see.
+  const stillMarking = !markingSettled || !namingSettled
+  // Which attempt the deadline belongs to, so it is derived rather than reset.
+  const [gaveUpOn, setGaveUpOn] = useState('')
+  const attempt = `${lockId ?? ''}|${prompt}`
+  const waitedLongEnough = gaveUpOn === attempt
+
+  useEffect(() => {
+    if (!stillMarking) return
+    const timer = window.setTimeout(() => setGaveUpOn(attempt), 12_000)
+    return () => window.clearTimeout(timer)
+  }, [stillMarking, attempt])
+
+  const ready = lockedHere && !moving && !planning && Boolean(prompt.trim())
+    && (!stillMarking || waitedLongEnough)
 
   return (
     <div className="stage stage--ask">
@@ -196,6 +216,12 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   </i>
                 )) : <em className="readback-muted">just the place itself</em>}
               </span>
+              {stillMarking && waitedLongEnough ? (
+                <span className="readback-line readback-line--warn">
+                  OpenStreetMap is slow right now — you can go ahead, the map is
+                  still real and nothing unverified will be named.
+                </span>
+              ) : null}
               {namedAsked ? (
                 <span className="readback-line">
                   <b>Named</b>
@@ -240,7 +266,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
           disabled={!ready}
           onClick={() => { void generateComparisonManually(); onGenerate() }}
         >
-          {moving ? 'Going there…' : marking ? 'Marking the map…' : 'Make both maps →'}
+          {moving ? 'Going there…' : marking && !waitedLongEnough ? 'Marking the map…' : 'Make both maps →'}
         </button>
         {data.error ? <div className="ai-error">{data.error}</div> : null}
       </div>

@@ -189,6 +189,25 @@ test('choosing a result does not look it up a second time', async ({ page }) => 
   expect(asked.some((query) => query.includes(','))).toBe(false)
 })
 
+test('a slow OpenStreetMap does not hold the demo hostage', async ({ page }) => {
+  await stubPlace(page)
+  await page.route('**/api/plan-overlays', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ categories: [{ key: 'medical', label: 'Medical', colour: '#ea4335' }], places: [] }),
+  }))
+  // Never answers. The map's geometry does not depend on it, so the run must
+  // still be able to go ahead — saying so, and naming nothing unverified.
+  await page.route('**/api/osm-overlays', () => {})
+
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await pickPlace(page)
+
+  await expect(page.getByRole('button', { name: /Make both maps/ })).toBeEnabled({ timeout: 45_000 })
+  await expect(page.locator('.readback')).toContainText('OpenStreetMap is slow right now')
+})
+
 test('waterways are never drawn as lines', async ({ page }) => {
   await stubPlace(page)
   await stubMarking(page, [], [])
