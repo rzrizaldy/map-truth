@@ -1,9 +1,12 @@
 /**
- * Ask Overpass, falling back to a mirror.
+ * Ask Overpass, reaching for a mirror when the first one is slow.
  *
- * The main instance rate-limits and sheds load under pressure, and a single run
- * here makes several queries. A refusal from one endpoint is not evidence that
- * the data is missing, so try another before reporting nothing found.
+ * Trying each endpoint in turn meant a server that had stopped answering cost
+ * its whole timeout before anything else was attempted — measured at forty
+ * seconds on a query that a mirror served in six. Requests are staggered
+ * instead: the next endpoint joins in only if the one before it has not
+ * answered yet, so the common case costs one request and the slow case is
+ * decided by whoever is fastest rather than by whoever was asked first.
  */
 const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
@@ -11,43 +14,51 @@ const ENDPOINTS = [
   'https://overpass.osm.jp/api/interpreter',
 ]
 
+/** How long to give an endpoint alone before letting the next one join. */
+const HEDGE_MS = 3_500
+
 export type OverpassResult<T> =
   | { ok: true; elements: T[] }
   | { ok: false; detail: string }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// Overpass usually answers in well under ten seconds. Waiting half a minute on
-// one that has stopped answering only delays reaching a mirror that would have.
+const ask = async <T>(endpoint: string, query: string, timeoutMs: number): Promise<OverpassResult<T>> => {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'MapTruth/1.0 (https://map-truth.vercel.app)',
+      },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!response.ok) return { ok: false, detail: `HTTP ${response.status}` }
+    const payload = (await response.json()) as { elements?: T[] }
+    return { ok: true, elements: payload.elements ?? [] }
+  } catch (error) {
+    return { ok: false, detail: error instanceof Error ? error.message : 'overpass_failed' }
+  }
+}
+
 export const overpass = async <T>(query: string, timeoutMs = 14_000): Promise<OverpassResult<T>> => {
   let detail = 'overpass_unavailable'
-  // Two passes over the endpoints. A public instance under load answers 429 or
-  // 504 and then serves the same query happily a moment later, so giving up
-  // after one try each was reporting "not found" for data that is there — it
-  // failed half the time when measured.
-  for (const attempt of [0, 1]) {
-    for (const endpoint of ENDPOINTS) {
-      if (attempt > 0) await wait(700)
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'MapTruth/1.0 (https://map-truth.vercel.app)',
-          },
-          body: `data=${encodeURIComponent(query)}`,
-          signal: AbortSignal.timeout(timeoutMs),
-        })
-        if (!response.ok) {
-          detail = `HTTP ${response.status}`
-          continue
-        }
-        const payload = (await response.json()) as { elements?: T[] }
-        return { ok: true, elements: payload.elements ?? [] }
-      } catch (error) {
-        detail = error instanceof Error ? error.message : 'overpass_failed'
-      }
+
+  const race = ENDPOINTS.map((endpoint, index) => (async () => {
+    if (index) await wait(index * HEDGE_MS)
+    const result = await ask<T>(endpoint, query, timeoutMs)
+    if (!result.ok) {
+      detail = result.detail
+      // Rejecting lets Promise.any move on to whichever endpoint does answer.
+      throw new Error(result.detail)
     }
+    return result
+  })())
+
+  try {
+    return await Promise.any(race)
+  } catch {
+    return { ok: false, detail }
   }
-  return { ok: false, detail }
 }
