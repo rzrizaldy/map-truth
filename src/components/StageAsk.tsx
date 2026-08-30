@@ -107,7 +107,14 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   }, [lockId, lockedHere, planning, planned, suggested])
 
   const marking = overlayStatus === 'planning' || overlayStatus === 'finding' || namedStatus === 'finding'
-  const ready = lockedHere && !moving && !marking && !planning && Boolean(prompt.trim())
+
+  // Being "not currently marking" is not the same as "done marking": between
+  // the plan landing and the debounced marking pass starting, both were idle
+  // and the button went live, so a quick click could generate a map with none
+  // of the markers the brief asked for. Wait for a settled result instead.
+  const markingSettled = !planned.length || overlayStatus === 'ready' || overlayStatus === 'error'
+  const namingSettled = !suggested.length || namedStatus === 'ready'
+  const ready = lockedHere && !moving && !planning && markingSettled && namingSettled && Boolean(prompt.trim())
 
   return (
     <div className="stage stage--ask">
