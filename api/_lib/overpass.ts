@@ -45,20 +45,29 @@ const ask = async <T>(endpoint: string, query: string, timeoutMs: number): Promi
 export const overpass = async <T>(query: string, timeoutMs = 14_000): Promise<OverpassResult<T>> => {
   let detail = 'overpass_unavailable'
 
-  const race = ENDPOINTS.map((endpoint, index) => (async () => {
-    if (index) await wait(index * HEDGE_MS)
-    const result = await ask<T>(endpoint, query, timeoutMs)
-    if (!result.ok) {
-      detail = result.detail
-      // Rejecting lets Promise.any move on to whichever endpoint does answer.
-      throw new Error(result.detail)
+  const round = async () => {
+    const race = ENDPOINTS.map((endpoint, index) => (async () => {
+      if (index) await wait(index * HEDGE_MS)
+      const result = await ask<T>(endpoint, query, timeoutMs)
+      if (!result.ok) {
+        detail = result.detail
+        // Rejecting lets Promise.any move on to whichever endpoint does answer.
+        throw new Error(result.detail)
+      }
+      return result
+    })())
+    try {
+      return await Promise.any(race)
+    } catch {
+      return null
     }
-    return result
-  })())
-
-  try {
-    return await Promise.any(race)
-  } catch {
-    return { ok: false, detail }
   }
+
+  // Hedging alone dropped success from ten runs in ten to six: when every
+  // endpoint is shedding load at once, one shot each is not enough. A second
+  // round costs nothing in the common case, because the first one answered.
+  const first = await round()
+  if (first) return first
+  await wait(1_500)
+  return (await round()) ?? { ok: false, detail }
 }
