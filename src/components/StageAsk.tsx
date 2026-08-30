@@ -203,14 +203,23 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                     <em className="readback-muted">checking {namedAsked} suggestions…</em>
                   ) : (
                     <>
-                      <i className="readback-chip" style={{ borderColor: '#9334e6', color: '#9334e6' }}>
-                        {namedPlaces.length} of {namedAsked} found
+                      <i
+                        className="readback-chip"
+                        style={namedPlaces.length
+                          ? { borderColor: '#9334e6', color: '#9334e6' }
+                          : { borderColor: 'var(--line)', color: 'var(--muted)' }}
+                      >
+                        {namedPlaces.length} of {namedAsked} verified
                       </i>
-                      {namedPlaces.length < namedAsked ? (
-                        <em className="readback-muted">
-                          the rest aren’t in OpenStreetMap here, so they aren’t mapped
-                        </em>
-                      ) : null}
+                      {/* Nothing verified is a finding about the map data, not a
+                          fault in the run — say which, or it reads as broken. */}
+                      <em className="readback-muted">
+                        {namedPlaces.length === 0
+                          ? `OpenStreetMap has none of the ${namedAsked} the AI suggested, so none were placed`
+                          : namedPlaces.length < namedAsked
+                            ? 'the rest aren’t in OpenStreetMap here, so they aren’t placed'
+                            : 'all placed at their real coordinates'}
+                      </em>
                     </>
                   )}
                 </span>
