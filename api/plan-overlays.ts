@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const { text } = await generateText({
       model: model(),
-      abortSignal: AbortSignal.timeout(30_000),
+      abortSignal: AbortSignal.timeout(18_000),
       system:
         'You decide what a map should mark, given a brief about a place.\n\n' +
         'Reply with JSON only, shaped {"categories": [...], "places": [...]}.\n\n' +

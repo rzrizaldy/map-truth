@@ -121,20 +121,22 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   // somebody else's server. Past the deadline we go on without the markers,
   // and the request is told there are none, which it already handles by
   // refusing to name any place it cannot see.
-  const stillMarking = !markingSettled || !namingSettled
+  // Everything after the lock — working out what to mark, finding it, checking
+  // the names — is enhancement. All of it leans on services that can be slow,
+  // so one deadline covers the lot rather than each waiting its own turn.
+  const enhancing = planning || !markingSettled || !namingSettled
   // Which attempt the deadline belongs to, so it is derived rather than reset.
   const [gaveUpOn, setGaveUpOn] = useState('')
   const attempt = `${lockId ?? ''}|${prompt}`
   const waitedLongEnough = gaveUpOn === attempt
 
   useEffect(() => {
-    if (!stillMarking) return
-    const timer = window.setTimeout(() => setGaveUpOn(attempt), 12_000)
+    if (!enhancing) return
+    const timer = window.setTimeout(() => setGaveUpOn(attempt), 15_000)
     return () => window.clearTimeout(timer)
-  }, [stillMarking, attempt])
+  }, [enhancing, attempt])
 
-  const ready = lockedHere && !moving && !planning && Boolean(prompt.trim())
-    && (!stillMarking || waitedLongEnough)
+  const ready = lockedHere && !moving && Boolean(prompt.trim()) && (!enhancing || waitedLongEnough)
 
   return (
     <div className="stage stage--ask">
@@ -216,7 +218,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   </i>
                 )) : <em className="readback-muted">just the place itself</em>}
               </span>
-              {stillMarking && waitedLongEnough ? (
+              {enhancing && waitedLongEnough ? (
                 <span className="readback-line readback-line--warn">
                   OpenStreetMap is slow right now — you can go ahead, the map is
                   still real and nothing unverified will be named.
