@@ -5,7 +5,7 @@ export const config = { maxDuration: 60 }
 
 const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
   ...init,
-  headers: { 'Cache-Control': 'public, max-age=600, s-maxage=600', ...init.headers },
+  headers: { 'Cache-Control': 'no-store', ...init.headers },
 })
 
 type Element = {

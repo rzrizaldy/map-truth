@@ -3,7 +3,7 @@ export const config = { maxDuration: 60 }
 
 const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
   ...init,
-  headers: { 'Cache-Control': 'public, max-age=600, s-maxage=600', ...init.headers },
+  headers: { 'Cache-Control': 'no-store', ...init.headers },
 })
 
 type Element = {
@@ -20,7 +20,9 @@ const quote = (value: string) => value.replace(/["\\]/g, '\\$&')
 // A regex on `name` alone has to scan every named object in the box and times
 // out on a city. Pairing it with a key that *is* indexed narrows the scan to
 // the handful of places that could plausibly be what was asked for.
-const POI_KEYS = ['amenity', 'shop', 'tourism', 'leisure', 'historic']
+// Kept short on purpose: every extra key multiplies the subqueries in the
+// fallback, and an expensive query is one a loaded server refuses.
+const POI_KEYS = ['amenity', 'shop', 'tourism']
 
 const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -92,7 +94,7 @@ export async function POST(request: Request): Promise<Response> {
     // Second pass for the misses only. OpenStreetMap often carries a variant of
     // the name — "Kopi Progo" for "Warung Kopi Progo" — which an exact match
     // cannot see and a narrowed regex can, cheaply.
-    const missed = results.filter((result) => !result.place).map((result) => result.query)
+    const missed = results.filter((result) => !result.place).map((result) => result.query).slice(0, 4)
     if (missed.length) {
       const fuzzy = `[out:json][timeout:25];(${
         missed.flatMap((name) => POI_KEYS.map((key) => `nwr["${key}"]["name"~"${quote(name)}",i](${box});`)).join('')
