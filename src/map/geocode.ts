@@ -42,31 +42,12 @@ export const describeViewport = async (center: [number, number]): Promise<Geocod
   }
 }
 
-/** Look a term up strictly inside the locked viewport. Never throws. */
+/** Suggestions for the place search box. Never throws; empty means nothing. */
 export const searchPlaces = async (query: string): Promise<GeocodedPlace[]> => {
   if (query.trim().length < 2) return []
   try {
     const payload = await post({ query: query.trim() })
     return payload?.places ?? []
-  } catch {
-    return []
-  }
-}
-
-/**
- * Resolve a name inside a given viewport.
- *
- * Used for names the model suggests: bounding the search is what stops a
- * plausible-sounding suggestion resolving to a same-named place elsewhere.
- */
-export const lookupAllWithinViewport = async (
-  queries: string[],
-  within: [number, number, number, number],
-): Promise<Array<{ query: string; place: GeocodedPlace | null }>> => {
-  if (!queries.length) return []
-  try {
-    const payload = await post({ queries, within }) as { results?: Array<{ query: string; place: GeocodedPlace | null }> }
-    return payload?.results ?? []
   } catch {
     return []
   }
