@@ -34,3 +34,9 @@ playwright/.cache/
 *.njsproj
 *.sln
 *.sw?
+
+# Throwaway verification scripts
+probe.mjs
+shot.mjs
+run.mjs
+capture.mjs
