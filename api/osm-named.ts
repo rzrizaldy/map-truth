@@ -1,4 +1,5 @@
 import { overpass } from './_lib/overpass.js'
+import { memo } from './_lib/memo.js'
 export const config = { maxDuration: 60 }
 
 const json = (value: unknown, init: ResponseInit = {}) => Response.json(value, {
@@ -56,13 +57,21 @@ export async function POST(request: Request): Promise<Response> {
   if (!names.length) return json({ results: [] })
 
   const box = `${south},${west},${north},${east}`
-  // Exact `name=` matches use Overpass's name index and return in a second.
-  const query = `[out:json][timeout:25];(${
-    names.map((name) => `nwr["name"="${quote(name)}"](${box});`).join('')
-  });out center tags 60;`
+  // Exact `name=` uses the name index; the narrowed regex catches the variants
+  // it cannot see. Both go in one union rather than two sequential round trips,
+  // which halves the wait and halves the chance of a loaded server refusing.
+  const clauses = names.flatMap((name) => [
+    `nwr["name"="${quote(name)}"](${box});`,
+    ...POI_KEYS.map((key) => `nwr["${key}"]["name"~"${quote(name)}",i](${box});`),
+  ])
+  const query = `[out:json][timeout:25];(${clauses.join('')});out center tags 120;`
 
   try {
-    const answer = await overpass<Element>(query, 25_000)
+    const answer = await memo(
+      `named|${box}|${names.join('|')}`,
+      () => overpass<Element>(query, 25_000),
+      (result) => result.ok && result.elements.length > 0,
+    )
     if (!answer.ok) return json({ results: [], error: 'overpass_failed', detail: answer.detail })
     const found = answer.elements
       .map((element) => ({
@@ -90,34 +99,6 @@ export async function POST(request: Request): Promise<Response> {
         ? { query: name, place: { name: hit.name, label: hit.name, center: [hit.longitude!, hit.latitude!] as [number, number], osmId: hit.osmId } }
         : { query: name, place: null }
     })
-
-    // Second pass for the misses only. OpenStreetMap often carries a variant of
-    // the name — "Kopi Progo" for "Warung Kopi Progo" — which an exact match
-    // cannot see and a narrowed regex can, cheaply.
-    const missed = results.filter((result) => !result.place).map((result) => result.query).slice(0, 4)
-    if (missed.length) {
-      const fuzzy = `[out:json][timeout:25];(${
-        missed.flatMap((name) => POI_KEYS.map((key) => `nwr["${key}"]["name"~"${quote(name)}",i](${box});`)).join('')
-      });out center tags 60;`
-      const second = await overpass<Element>(fuzzy, 25_000)
-      if (second.ok) {
-        const alsoFound = second.elements
-          .map((element) => ({
-            name: element.tags?.name ?? '',
-            latitude: element.lat ?? element.center?.lat,
-            longitude: element.lon ?? element.center?.lon,
-            osmId: `osm:${element.type[0]}${element.id}`,
-          }))
-          .filter((entry) => entry.name && typeof entry.latitude === 'number' && typeof entry.longitude === 'number')
-        for (const result of results) {
-          if (result.place) continue
-          const hit = pick(alsoFound, result.query)
-          if (hit) {
-            result.place = { name: hit.name, label: hit.name, center: [hit.longitude!, hit.latitude!] as [number, number], osmId: hit.osmId }
-          }
-        }
-      }
-    }
 
     return json({ results })
   } catch (error) {

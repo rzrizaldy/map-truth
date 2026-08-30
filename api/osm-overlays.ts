@@ -1,4 +1,5 @@
 import { overpass } from './_lib/overpass.js'
+import { memo } from './_lib/memo.js'
 import { OVERLAY_CATEGORIES, isOverlayCategory, type OverlayCategory } from './_lib/overlay-categories.js'
 
 export const config = { maxDuration: 60 }
@@ -66,7 +67,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!categories.length) return json({ markers: [] })
 
   try {
-    const answer = await overpass<Element>(buildQuery(categories, [west, south, east, north]), 30_000)
+    const answer = await memo(
+      `marks|${south},${west},${north},${east}|${categories.join('+')}`,
+      () => overpass<Element>(buildQuery(categories, [west, south, east, north]), 30_000),
+      (result) => result.ok && result.elements.length > 0,
+    )
     if (!answer.ok) return json({ markers: [], error: 'overpass_failed', detail: answer.detail })
     const perCategory = new Map<OverlayCategory, Array<OverlayMarker & { notable: boolean; distance: number }>>()
     const seen = new Set<string>()
