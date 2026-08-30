@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapStudio } from '../map/MapStudio'
 import { PlaceSearch } from './PlaceSearch'
 import { EXAMPLES } from '../map/examples'
@@ -27,6 +27,8 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   const [moving, setMoving] = useState(false)
   const [focusFailed, setFocusFailed] = useState<string | undefined>()
   const [plan, setPlan] = useState<Plan & { forPrompt: string }>({ forPrompt: '', categories: [], places: [] })
+  // Two plans can be in flight after a quick edit; only the current one counts.
+  const planTicket = useRef(0)
 
   // The lock must belong to the place that was chosen. Without this a stale
   // lock from a previous place will happily ground the next brief — which is
@@ -81,8 +83,10 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   // Read what the brief asks the map to show, independent of where it is.
   useEffect(() => {
     if (!prompt.trim()) return
+    const ticket = ++planTicket.current
     const timer = window.setTimeout(async () => {
       const next = await planOverlays(prompt, chosen?.label)
+      if (planTicket.current !== ticket) return
       setPlan({ forPrompt: prompt, ...next })
     }, 650)
     return () => window.clearTimeout(timer)
@@ -175,6 +179,10 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   <em className="readback-line--warn">OpenStreetMap didn’t answer — the map is real, just unmarked.</em>
                 ) : marking || planning ? (
                   <em className="readback-muted">working it out…</em>
+                ) : plan.forPrompt === prompt && plan.failed ? (
+                  <em className="readback-line--warn">
+                    Couldn’t work out what to mark just now.
+                  </em>
                 ) : overlayCategories.length ? overlayCategories.map((category) => (
                   <i key={category.key} className="readback-chip" style={{ borderColor: category.colour, color: category.colour }}>
                     {category.label} · {overlays.filter((marker) => marker.category === category.key).length}

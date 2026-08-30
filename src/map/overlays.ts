@@ -25,7 +25,7 @@ const postJson = async <T>(url: string, body: unknown): Promise<T | null> => {
   }
 }
 
-export type Plan = { categories: PlannedCategory[]; places: string[] }
+export type Plan = { categories: PlannedCategory[]; places: string[]; failed?: boolean }
 
 /**
  * Ask what a brief needs: kinds of place, and the specific ones worth naming.
@@ -34,10 +34,12 @@ export type Plan = { categories: PlannedCategory[]; places: string[] }
  * answer without it.
  */
 export const planOverlays = async (prompt: string, place?: string): Promise<Plan> => {
-  const payload = await postJson<{ categories?: PlannedCategory[]; places?: string[] }>(
+  const payload = await postJson<{ categories?: PlannedCategory[]; places?: string[]; error?: string }>(
     '/api/plan-overlays', { prompt, place },
   )
-  return { categories: payload?.categories ?? [], places: payload?.places ?? [] }
+  // "Could not work it out" and "nothing to mark" are different answers.
+  if (!payload || payload.error) return { categories: [], places: [], failed: true }
+  return { categories: payload.categories ?? [], places: payload.places ?? [] }
 }
 
 let inFlight = ''

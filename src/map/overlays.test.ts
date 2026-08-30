@@ -75,3 +75,17 @@ describe('when OpenStreetMap does not answer', () => {
     expect(appStore.getState().overlays).toHaveLength(1)
   })
 })
+
+describe('planning a brief', () => {
+  it('reports a failed plan rather than an empty one', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ categories: [], places: [], error: 'plan_failed' })) as never
+    const { planOverlays } = await import('./overlays')
+    expect(await planOverlays('anything')).toMatchObject({ failed: true })
+  })
+
+  it('a genuinely empty plan is not a failure', async () => {
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ categories: [], places: [] })) as never
+    const { planOverlays } = await import('./overlays')
+    expect(await planOverlays('a plain poster')).toEqual({ categories: [], places: [] })
+  })
+})
