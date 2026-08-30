@@ -17,6 +17,11 @@ type Element = {
 
 const quote = (value: string) => value.replace(/["\\]/g, '\\$&')
 
+// A regex on `name` alone has to scan every named object in the box and times
+// out on a city. Pairing it with a key that *is* indexed narrows the scan to
+// the handful of places that could plausibly be what was asked for.
+const POI_KEYS = ['amenity', 'shop', 'tourism', 'leisure', 'historic']
+
 const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 /**
@@ -49,9 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!names.length) return json({ results: [] })
 
   const box = `${south},${west},${north},${east}`
-  // Exact `name=` matches use Overpass's name index and return in a second. A
-  // case-insensitive regex over the same box has to scan every named object and
-  // times out, which is what a bbox the size of a city was doing.
+  // Exact `name=` matches use Overpass's name index and return in a second.
   const query = `[out:json][timeout:25];(${
     names.map((name) => `nwr["name"="${quote(name)}"](${box});`).join('')
   });out center tags 60;`
@@ -71,14 +74,49 @@ export async function POST(request: Request): Promise<Response> {
     // Match each suggestion to the closest-named thing Overpass returned, so a
     // request for "Kopi Aroma" cannot be satisfied by an unrelated result that
     // happened to come back in the same batch.
-    const results = names.map((name) => {
+    const pick = (pool: typeof found, name: string) => {
       const wanted = normalise(name)
-      const hit = found.find((entry) => normalise(entry.name) === wanted)
-        ?? found.find((entry) => normalise(entry.name).includes(wanted))
+      return pool.find((entry) => normalise(entry.name) === wanted)
+        ?? pool.find((entry) => normalise(entry.name).includes(wanted))
+        ?? pool.find((entry) => wanted.includes(normalise(entry.name)))
+    }
+
+    type Hit = { query: string; place: { name: string; label: string; center: [number, number]; osmId: string } | null }
+    const results: Hit[] = names.map((name) => {
+      const hit = pick(found, name)
       return hit
         ? { query: name, place: { name: hit.name, label: hit.name, center: [hit.longitude!, hit.latitude!] as [number, number], osmId: hit.osmId } }
         : { query: name, place: null }
     })
+
+    // Second pass for the misses only. OpenStreetMap often carries a variant of
+    // the name — "Kopi Progo" for "Warung Kopi Progo" — which an exact match
+    // cannot see and a narrowed regex can, cheaply.
+    const missed = results.filter((result) => !result.place).map((result) => result.query)
+    if (missed.length) {
+      const fuzzy = `[out:json][timeout:25];(${
+        missed.flatMap((name) => POI_KEYS.map((key) => `nwr["${key}"]["name"~"${quote(name)}",i](${box});`)).join('')
+      });out center tags 60;`
+      const second = await overpass<Element>(fuzzy, 25_000)
+      if (second.ok) {
+        const alsoFound = second.elements
+          .map((element) => ({
+            name: element.tags?.name ?? '',
+            latitude: element.lat ?? element.center?.lat,
+            longitude: element.lon ?? element.center?.lon,
+            osmId: `osm:${element.type[0]}${element.id}`,
+          }))
+          .filter((entry) => entry.name && typeof entry.latitude === 'number' && typeof entry.longitude === 'number')
+        for (const result of results) {
+          if (result.place) continue
+          const hit = pick(alsoFound, result.query)
+          if (hit) {
+            result.place = { name: hit.name, label: hit.name, center: [hit.longitude!, hit.latitude!] as [number, number], osmId: hit.osmId }
+          }
+        }
+      }
+    }
+
     return json({ results })
   } catch (error) {
     return json({ results: [], error: 'overpass_failed', detail: error instanceof Error ? error.message : 'unknown' })
