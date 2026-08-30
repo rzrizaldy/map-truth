@@ -37,7 +37,7 @@ const buildQuery = (categories: OverlayCategory[], [west, south, east, north]: [
   // Ranking needs a pool to rank. Overpass applies its own cap before we ever
   // see the results, so asking for six back means getting the first six it
   // happens to find — never the notable ones.
-  return `[out:json][timeout:25];(${blocks.join('')});out center tags ${Math.min(1_200, categories.length * 300)};`
+  return `[out:json][timeout:12];(${blocks.join('')});out center tags ${Math.min(1_200, categories.length * 300)};`
 }
 
 const matches = (tags: Record<string, string>, category: OverlayCategory) =>
@@ -69,7 +69,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const answer = await memo(
       `marks|${south},${west},${north},${east}|${categories.join('+')}`,
-      () => overpass<Element>(buildQuery(categories, [west, south, east, north]), 30_000),
+      () => overpass<Element>(buildQuery(categories, [west, south, east, north])),
       (result) => result.ok && result.elements.length > 0,
     )
     if (!answer.ok) return json({ markers: [], error: 'overpass_failed', detail: answer.detail })

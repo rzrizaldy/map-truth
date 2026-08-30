@@ -64,12 +64,12 @@ export async function POST(request: Request): Promise<Response> {
     `nwr["name"="${quote(name)}"](${box});`,
     ...POI_KEYS.map((key) => `nwr["${key}"]["name"~"${quote(name)}",i](${box});`),
   ])
-  const query = `[out:json][timeout:25];(${clauses.join('')});out center tags 120;`
+  const query = `[out:json][timeout:12];(${clauses.join('')});out center tags 120;`
 
   try {
     const answer = await memo(
       `named|${box}|${names.join('|')}`,
-      () => overpass<Element>(query, 25_000),
+      () => overpass<Element>(query),
       (result) => result.ok && result.elements.length > 0,
     )
     if (!answer.ok) return json({ results: [], error: 'overpass_failed', detail: answer.detail })

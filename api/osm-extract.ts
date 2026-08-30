@@ -13,7 +13,7 @@ const json = (value: unknown, init: ResponseInit = {}) =>
   })
 
 const overpassQuery = (south: number, west: number, north: number, east: number) => `
-[out:json][timeout:25];
+[out:json][timeout:12];
 (
   way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${south},${west},${north},${east});
   way["highway"]["name"](${south},${west},${north},${east});

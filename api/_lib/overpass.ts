@@ -17,7 +17,9 @@ export type OverpassResult<T> =
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export const overpass = async <T>(query: string, timeoutMs = 30_000): Promise<OverpassResult<T>> => {
+// Overpass usually answers in well under ten seconds. Waiting half a minute on
+// one that has stopped answering only delays reaching a mirror that would have.
+export const overpass = async <T>(query: string, timeoutMs = 14_000): Promise<OverpassResult<T>> => {
   let detail = 'overpass_unavailable'
   // Two passes over the endpoints. A public instance under load answers 429 or
   // 504 and then serves the same query happily a moment later, so giving up
