@@ -7,6 +7,8 @@ Working notes for the Devpost entry. Not part of the app.
 ## Video script (~2 min 20 s spoken, ~350 words)
 
 Read at a normal pace. Timings are cues for what to show, not hard cuts.
+For the shot-by-shot version with cut points — and a prompt for an agent doing
+the screen capture — see [recording.md](recording.md).
 
 ### 0:00 — The problem, on screen (~20 s)
 
@@ -129,4 +131,31 @@ interface on purpose: an unverifiable place is not placed.
 ### Built during the submission period
 
 Repository created 26 August 2026, first commit the same day. All work is in
-dated commits from 26–30 August.
+dated commits from 26 August onward.
+
+---
+
+## Testing instructions
+
+No login, no credentials, nothing to install.
+
+1. Open <https://map-truth.vercel.app> in Chrome with WebMCP enabled
+   (`chrome://flags/#enable-webmcp-testing`), or in ChatGPT's in-app browser.
+   The header reads **Agent mode · 10 tools** when the browser exposes WebMCP,
+   and **Manual mode** when it does not — the app works either way.
+2. Click **New York landmarks & subway**, then **Make both maps**. Generation
+   takes about a minute for the pair.
+3. The three example buttons replay an OpenStreetMap snapshot checked into the
+   repository, so a demo cannot stall on a public service having a bad minute.
+   The panel says so while one is active. **Type your own city and brief** to
+   exercise the live path: geocoder, model plan, and Overpass lookups all run,
+   which takes roughly fifteen seconds.
+4. To drive it as an agent would, open the agent panel from the header badge
+   and run the tools directly. `npm run verify:webmcp` asks the browser's own
+   `document.modelContext.getTools()` what the page registered, and prints the
+   ten names.
+
+Worth trying, because it is the whole argument: a brief asking for "the best"
+of something. The model suggests real names from its own knowledge, every one
+is looked up in OpenStreetMap, and the ones that cannot be found are counted
+and dropped rather than placed approximately.
