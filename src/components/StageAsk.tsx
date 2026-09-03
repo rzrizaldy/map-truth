@@ -97,9 +97,13 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
     [plan, prompt],
   )
 
-  // Read what the brief asks the map to show, independent of where it is.
+  // Read what the brief asks the map to show, once there is a map to show it
+  // on. Planning before a place is picked spent a model call on every page
+  // load — on the placeholder brief, no less — and then spent another the
+  // moment a place arrived, because the answer depends on where you are:
+  // "the best cafes" has no meaning until somewhere is chosen.
   useEffect(() => {
-    if (!prompt.trim() || replaying) return
+    if (!prompt.trim() || replaying || !chosen) return
     const ticket = ++planTicket.current
     const timer = window.setTimeout(async () => {
       const next = await planOverlays(prompt, chosen?.label)
@@ -107,7 +111,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
       setPlan({ forPrompt: prompt, ...next })
     }, 650)
     return () => window.clearTimeout(timer)
-  }, [prompt, chosen?.label, replaying])
+  }, [prompt, chosen, replaying])
 
   // Mark once we have both a place and a plan for it.
   const lockId = data.lock?.id

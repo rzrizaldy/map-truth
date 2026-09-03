@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "maplibre:copy": "mkdir -p public/maplibre && cp node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs public/maplibre/",
     "verify:webmcp": "node scripts/verify-webmcp.mjs",
-    "capture:preload": "node --experimental-strip-types scripts/capture-preload.mjs"
+    "capture:preload": "node --experimental-strip-types scripts/capture-preload.mjs",
+    "demo:drive": "node scripts/demo-drive.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.47",

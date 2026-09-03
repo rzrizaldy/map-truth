@@ -120,9 +120,33 @@ test('the examples are one click and set a consistent state', async ({ page }) =
   await expect(page.locator('.example')).toHaveCount(3)
 
   // An example sets both halves — the place and the brief — so it lands ready.
-  await page.locator('.example', { hasText: 'Pittsburgh bike trail' }).click()
-  await expect(page.getByRole('textbox')).toHaveValue(/Bike trail map/)
+  // It also answers them from the checked-in snapshot, which is why the stubs
+  // above are never reached: no geocode, no plan, no Overpass.
+  await page.locator('.example', { hasText: 'Pittsburgh POGOH' }).click()
+  await expect(page.getByRole('textbox')).toHaveValue(/POGOH bike share map/)
   await expect(page.locator('.place-chosen')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.readback')).toContainText('saved OpenStreetMap snapshot')
+  // Real POGOH docks, at the coordinates OpenStreetMap holds for them.
+  await expect(page.locator('.readback-chip', { hasText: 'Bike' })).toContainText('5')
+  await expect(page.locator('.button--go')).toBeEnabled({ timeout: 30_000 })
+})
+
+test('a replayed example asks nothing of the network', async ({ page }) => {
+  // The point of the snapshot is that a recording cannot be spoiled by a
+  // public service having a bad minute, so prove none of them are consulted.
+  const asked = []
+  for (const path of ['geocode', 'plan-overlays', 'osm-overlays', 'osm-named']) {
+    await page.route(`**/api/${path}`, (route) => {
+      asked.push(path)
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+    })
+  }
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await page.locator('.example', { hasText: 'New York landmarks' }).click()
+  await expect(page.locator('.button--go')).toBeEnabled({ timeout: 30_000 })
+  await expect(page.locator('.readback')).toContainText('6 of 8 verified')
+  expect(asked).toEqual([])
 })
 
 test('the brief decides what gets marked, OpenStreetMap decides where', async ({ page }) => {
