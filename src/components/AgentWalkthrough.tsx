@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { extractPlaceMentions } from '../map/places'
 import { walkthroughSteps, announceWalkthrough, runWalkthroughStep, type WalkthroughStep } from '../webmcp/walkthrough'
 import { useAppStore } from '../state/store'
 import type { ToolResult } from '../types/maptruth'
@@ -26,13 +25,12 @@ const summarise = (tool: string, result?: ToolResult): string => {
 }
 
 export function AgentWalkthrough() {
-  const prompt = useAppStore((state) => state.ai.prompt)
   const mapReady = useAppStore((state) => state.ui.mapReady)
   const webmcpAvailable = useAppStore((state) => state.ui.webmcpAvailable)
+  const place = useAppStore((state) => state.place.query ?? state.place.name)
+  const hasPlace = useAppStore((state) => state.place.source !== 'none')
   const [steps, setSteps] = useState<Array<{ step: WalkthroughStep } & StepState>>([])
   const [running, setRunning] = useState(false)
-
-  const place = extractPlaceMentions(prompt)[0]?.query ?? 'Kyoto'
 
   const run = async () => {
     const plan = walkthroughSteps(place)
@@ -66,8 +64,8 @@ export function AgentWalkthrough() {
           <span>WEBMCP</span>
           <strong>Watch an assistant do it</strong>
         </div>
-        <button className="button button--small" type="button" onClick={() => void run()} disabled={!mapReady || running}>
-          {running ? 'Running…' : `Run the agent on ${place}`}
+        <button className="button button--small" type="button" onClick={() => void run()} disabled={!mapReady || !hasPlace || running}>
+          {running ? 'Running…' : hasPlace ? `Run the agent on ${place}` : 'Choose a place first'}
         </button>
       </div>
       <p className="agent-demo-note">

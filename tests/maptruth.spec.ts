@@ -388,6 +388,7 @@ test('the visible walkthrough invokes registered tools through native executeToo
     type Registered = { name: string; execute: (input: unknown) => unknown }
     const registered: Registered[] = []
     const calls: string[] = []
+    const inputs: unknown[] = []
     Object.defineProperty(document, 'modelContext', {
       configurable: true,
       value: {
@@ -395,11 +396,14 @@ test('the visible walkthrough invokes registered tools through native executeToo
         getTools: async () => registered,
         executeTool: async (tool: Registered, input: string) => {
           calls.push(tool.name)
-          return JSON.stringify(await tool.execute(JSON.parse(input)))
+          const parsed = JSON.parse(input)
+          inputs.push(parsed)
+          return JSON.stringify(await tool.execute(parsed))
         },
       },
     })
     ;(window as unknown as { __nativeCalls: string[] }).__nativeCalls = calls
+    ;(window as unknown as { __nativeInputs: unknown[] }).__nativeInputs = inputs
   })
   await stubPlace(page)
   await stubMarking(page,
@@ -409,6 +413,7 @@ test('the visible walkthrough invokes registered tools through native executeToo
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
   await settled(page)
+  await page.locator('.ask-input').fill('Landmarks and subway map. Mark the sights and nearest stations.')
   await page.locator('.agent-toggle').click()
   await page.getByRole('button', { name: /^Run the agent on / }).click()
   await expect(page.locator('.agent-step--done')).toHaveCount(6, { timeout: 120_000 })
@@ -418,6 +423,9 @@ test('the visible walkthrough invokes registered tools through native executeToo
     'focus_place', 'inspect_map_context', 'lock_live_osm',
     'mark_from_osm', 'verify_geography', 'generate_comparison',
   ])
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __nativeInputs: Array<{ place?: string }> }).__nativeInputs[0],
+  )).toEqual({ place: JAKARTA.name })
 })
 
 test('an agent can navigate and lock through WebMCP alone', async ({ page }) => {
