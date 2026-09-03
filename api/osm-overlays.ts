@@ -78,8 +78,12 @@ export async function POST(request: Request): Promise<Response> {
 
     for (const element of answer.elements) {
       const tags = element.tags ?? {}
-      const name = tags.name
-      if (!name) continue
+      // A legend is only as good as the names in it, and OpenStreetMap
+      // contains half-finished ones — a real bike dock came back tagged
+      // "POGOH -", which on a poster reads as a bug in this app rather than a
+      // gap in the map. An unusable name is the same as no name.
+      const name = (tags.name ?? '').replace(/[\s\-–—:,]+$/, '').trim()
+      if (name.length < 2) continue
       const latitude = element.lat ?? element.center?.lat
       const longitude = element.lon ?? element.center?.lon
       if (typeof latitude !== 'number' || typeof longitude !== 'number') continue

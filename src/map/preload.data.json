@@ -1,6 +1,313 @@
 {
   "capturedAt": "2026-09-03",
   "scenarios": {
+    "Peta demo DPR Jakarta": {
+      "place": {
+        "name": "Dewan Perwakilan Rakyat / Majelis Permusyawaratan Rakyat",
+        "label": "Dewan Perwakilan Rakyat / Majelis Permusyawaratan Rakyat, 6, Jalan Jenderal Gatot Subroto, RW 01, Gelora, Tanah Abang, Central Jakarta, Special Capital Region of Jakarta, 10270, Indonesia",
+        "center": [
+          106.80029,
+          -6.2102083
+        ],
+        "bbox": [
+          106.7967416,
+          -6.2138849,
+          106.8050111,
+          -6.2064236
+        ],
+        "zoom": 14.6,
+        "kind": "office"
+      },
+      "categories": [
+        {
+          "key": "gathering_point",
+          "label": "Gathering point",
+          "colour": "#1a73e8"
+        },
+        {
+          "key": "medical",
+          "label": "Medical",
+          "colour": "#ea4335"
+        }
+      ],
+      "suggested": [
+        "Gelora Bung Karno (GBK)",
+        "Monumen Nasional (Monas)",
+        "Rumah Sakit Cipto Mangunkusumo (RSCM)",
+        "Puskesmas Kecamatan Tanah Abang"
+      ],
+      "markers": [
+        {
+          "category": "gathering_point",
+          "label": "Gathering point",
+          "colour": "#1a73e8",
+          "name": "Taman Cattleya",
+          "center": [
+            106.8013396,
+            -6.2064795
+          ],
+          "osmId": "osm:w367725561"
+        },
+        {
+          "category": "gathering_point",
+          "label": "Gathering point",
+          "colour": "#1a73e8",
+          "name": "Taman Museum Manggala",
+          "center": [
+            106.7981936,
+            -6.2070704
+          ],
+          "osmId": "osm:w557847706"
+        },
+        {
+          "category": "gathering_point",
+          "label": "Gathering point",
+          "colour": "#1a73e8",
+          "name": "Taman Manggala Wanabhakti",
+          "center": [
+            106.8000187,
+            -6.2061348
+          ],
+          "osmId": "osm:w557847705"
+        },
+        {
+          "category": "medical",
+          "label": "Medical",
+          "colour": "#ea4335",
+          "name": "Klinik Pratama Visiana Medika TVRI",
+          "center": [
+            106.8008959,
+            -6.2130713
+          ],
+          "osmId": "osm:n12860604763"
+        }
+      ],
+      "named": []
+    },
+    "New York landmarks & subway": {
+      "place": {
+        "name": "Lower Manhattan",
+        "label": "Lower Manhattan, Manhattan, New York County, New York, 10000, United States",
+        "center": [
+          -74.0054261,
+          40.7135482
+        ],
+        "bbox": [
+          -74.0154261,
+          40.7035482,
+          -73.9954261,
+          40.7235482
+        ],
+        "zoom": 13.86,
+        "kind": "quarter"
+      },
+      "categories": [
+        {
+          "key": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f"
+        },
+        {
+          "key": "transit",
+          "label": "Transit",
+          "colour": "#188038"
+        }
+      ],
+      "suggested": [
+        "Statue of Liberty National Monument",
+        "One World Trade Center",
+        "Brooklyn Bridge",
+        "National September 11 Memorial & Museum",
+        "South Ferry",
+        "World Trade Center",
+        "Brooklyn Bridge\u2013City Hall",
+        "Fulton Street"
+      ],
+      "markers": [
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "African Burial Ground National Monument",
+          "center": [
+            -74.004464,
+            40.7145261
+          ],
+          "osmId": "osm:r11077079"
+        },
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "Triumph of the Human Spirit",
+          "center": [
+            -74.0028881,
+            40.7144385
+          ],
+          "osmId": "osm:n1329113669"
+        },
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "Woolworth Building",
+          "center": [
+            -74.0083348,
+            40.7124548
+          ],
+          "osmId": "osm:w75363809"
+        },
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "Mmuseumm",
+          "center": [
+            -74.002815,
+            40.717363
+          ],
+          "osmId": "osm:n5640186350"
+        },
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "FDNY Ladder 8",
+          "center": [
+            -74.0066188,
+            40.7195568
+          ],
+          "osmId": "osm:w250052723"
+        },
+        {
+          "category": "landmark",
+          "label": "Landmark",
+          "colour": "#c5221f",
+          "name": "South Street Seaport Museum",
+          "center": [
+            -74.003676,
+            40.706628
+          ],
+          "osmId": "osm:n2898706753"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "Brooklyn Bridge\u2013City Hall",
+          "center": [
+            -74.0050702,
+            40.71235
+          ],
+          "osmId": "osm:n2024879489"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "City Hall",
+          "center": [
+            -74.006978,
+            40.713282
+          ],
+          "osmId": "osm:n2014092920"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "Park Place",
+          "center": [
+            -74.0091645,
+            40.7132181
+          ],
+          "osmId": "osm:n2052618395"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "Fulton Street",
+          "center": [
+            -74.0076322,
+            40.7103294
+          ],
+          "osmId": "osm:n5365369116"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "Chambers Street",
+          "center": [
+            -74.0092451,
+            40.7155081
+          ],
+          "osmId": "osm:n597928298"
+        },
+        {
+          "category": "transit",
+          "label": "Transit",
+          "colour": "#188038",
+          "name": "Franklin Street",
+          "center": [
+            -74.0069278,
+            40.7191802
+          ],
+          "osmId": "osm:n597937490"
+        }
+      ],
+      "named": [
+        {
+          "name": "One World Trade Center",
+          "label": "One World Trade Center",
+          "center": [
+            -74.0131894,
+            40.7129993
+          ]
+        },
+        {
+          "name": "Brooklyn Bridge",
+          "label": "Brooklyn Bridge",
+          "center": [
+            -74.0033482,
+            40.7113717
+          ]
+        },
+        {
+          "name": "National September 11 Memorial & Museum",
+          "label": "National September 11 Memorial & Museum",
+          "center": [
+            -74.0131702,
+            40.7115548
+          ]
+        },
+        {
+          "name": "World Trade Center",
+          "label": "World Trade Center",
+          "center": [
+            -74.012527,
+            40.7119004
+          ]
+        },
+        {
+          "name": "Brooklyn Bridge\u2013City Hall",
+          "label": "Brooklyn Bridge\u2013City Hall",
+          "center": [
+            -74.0050702,
+            40.71235
+          ]
+        },
+        {
+          "name": "Fulton Street",
+          "label": "Fulton Street",
+          "center": [
+            -74.0090018,
+            40.7110085
+          ]
+        }
+      ]
+    },
     "Pittsburgh POGOH bike share": {
       "place": {
         "name": "Downtown",
@@ -80,7 +387,7 @@
           "category": "bike",
           "label": "Bike",
           "colour": "#0b8043",
-          "name": "POGOH -",
+          "name": "POGOH",
           "center": [
             -80.0090847,
             40.4457543
