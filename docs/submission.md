@@ -1,161 +1,171 @@
-# Submission kit
+# Devpost submission kit
 
-Working notes for the Devpost entry. Not part of the app.
+Canonical copy for the WebMCP Challenge submission. Keep the live app, public
+repository, video, and this document unchanged after the submission deadline.
 
----
+## Links
 
-## Video script (~2 min 20 s spoken, ~350 words)
+- Live project: <https://map-truth.vercel.app>
+- Public source: <https://github.com/rzrizaldy/map-truth>
+- Public demo video: <https://youtu.be/cMuCQtug00M> (1:38)
+- License: [MIT](../LICENSE)
 
-Read at a normal pace. Timings are cues for what to show, not hard cuts.
-For the shot-by-shot version with cut points — and a prompt for an agent doing
-the screen capture — see [recording.md](recording.md).
+## Project overview
 
-### 0:00 — The problem, on screen (~20 s)
+**Project name:** MapTruth
 
-> Ask any image model for a map of a real place and it will give you one.
-> It will look convincing. The streets will be in the wrong places, the
-> landmarks will be somewhere they have never been, and nothing on it will
-> tell you which parts are real.
->
-> That is fine for a wallpaper. It is not fine for a protest safety map, an
-> evacuation route, or anything somebody might actually follow.
+**Elevator pitch (148/200 characters):**
 
-*Show: the left-hand result — a beautiful invented Bandung poster with a
-"TOP 10 COFFEESHOP" list. Let it look good. That is the point.*
+> MapTruth lets people and browser agents turn a real OpenStreetMap view into
+> AI-generated map artwork—without letting the model invent the geography.
 
-### 0:20 — Why WebMCP is the answer (~35 s)
-
-> MapTruth is a page that already holds the truth. A live OpenStreetMap
-> view, every shape hashed to its source.
->
-> WebMCP lets an assistant reach into that page and use it — not by reading
-> a screenshot, not by scraping the DOM, but by calling the same ten
-> functions the buttons call. So the page keeps its own rules. The agent
-> can move the map, lock it, and decide what to mark. It cannot invent a
-> coordinate, because it is never given one to invent.
->
-> That is the difference between an agent that describes a map and an agent
-> that works inside one.
-
-*Show: the header badge reading "Agent mode · 10 tools", then the drawer
-listing them.*
-
-### 0:55 — The flow (~45 s)
-
-> You pick a real place. OpenStreetMap decides where it is.
->
-> You say what the map needs — here, the best coffee shops in Bandung.
-> The model does the part only it can do: it knows which places people
-> actually mean. It returns names, and nothing else. No coordinates.
->
-> Every name is then looked up in OpenStreetMap. The ones that exist get
-> pinned at their real position. The ones that do not are dropped, and the
-> page says so out loud: two of four verified. That number is the product.
-
-*Show: search "Bandung", type the brief, the read-back filling in, purple
-numbered pins appearing on the map.*
-
-### 1:40 — The comparison (~30 s)
-
-> Same brief, twice. One model never saw a map. The other was handed this
-> one.
->
-> The invented version is prettier. It is also fiction. The grounded one is
-> drawn on streets you can check — and there is a link under it to do
-> exactly that, on OpenStreetMap.
-
-*Show: the two results side by side, then click "Check on OpenStreetMap".*
-
-### 2:10 — Close (~15 s)
-
-> A model can style evidence. It should not be the one supplying it.
-> That is what WebMCP made possible here: the human chooses, the model
-> suggests, and the map is the thing that decides.
-
-*Show: the live URL.*
-
----
-
-## Devpost description
+## Project description
 
 ### What it does
 
-MapTruth generates map artwork that is grounded in real geography instead of
-imagined geography. You pick a real place, describe the map you need, and it
-produces two results side by side: one from a model that never saw a map, and
-one drawn on a live, hashed OpenStreetMap view of that exact place.
+Ask an image model for a map of a real place and it can draw something
+beautiful, confident, and geographically false. MapTruth changes the input to
+that process. A person chooses a place and writes a brief; MapTruth locks a
+live OpenStreetMap view, resolves requested features against OpenStreetMap,
+and generates two images side by side: one from the prompt alone and one
+grounded in the sourced map.
 
-### Why WebMCP, specifically
+The comparison makes the failure mode visible. In the New Orleans demo, the
+ungrounded result invents a plausible city. The grounded result preserves the
+large-scale relationship among Lake Pontchartrain, the city, and the
+Mississippi River, and marks only places resolved within the locked view.
 
-The problem with letting an assistant make a map is not that models are bad at
-drawing. It is that a model asked for a coordinate will produce one, and a
-wrong coordinate is indistinguishable from a right one once it is rendered.
+### Why WebMCP
 
-WebMCP fixes the shape of the problem rather than the model's behaviour. The
-page owns a live OpenStreetMap view and every invariant that matters: features
-are hashed to their source, the lock belongs to a place that was explicitly
-chosen, and nothing unverified can be drawn. Exposing ten tools through
-`document.modelContext` lets an assistant operate that page directly —
-`focus_place`, `lock_live_osm`, `mark_from_osm`, `verify_geography` — instead
-of being handed a screenshot to interpret or a DOM to scrape.
+The page—not the model—owns the map and its invariants. Through
+`document.modelContext.registerTool`, MapTruth exposes ten typed browser tools
+for focusing a place, navigating, inspecting and locking the live map, marking
+features from OpenStreetMap, verifying geography, and staging a comparison.
+An agent calls those tools directly instead of interpreting a screenshot or
+scraping UI text.
 
-The division of labour that falls out of this is the interesting part:
+That changes what an agent is allowed to invent. The model may decide what
+kinds of places a brief needs, but it never supplies their coordinates.
+OpenStreetMap locates them. Anything that cannot be resolved inside the locked
+view is dropped and reported rather than approximately placed.
 
-- **The model names.** It knows which cafes in Bandung people mean. It returns
-  names only, and is structurally incapable of returning a position.
-- **OpenStreetMap locates.** Every name is looked up in the locked viewport.
-  Whatever cannot be found is dropped, and the interface reports the drop —
-  "2 of 4 verified" — rather than quietly placing it approximately.
-- **The person decides.** The place is chosen explicitly, and every costed
-  generation stops at a visible approval gate.
+The app's visible six-step assistant walkthrough uses WebMCP's native
+`executeTool()` path when it is available, so judges can watch the agent call
+the same registered tools that another browser agent discovers. It leaves a
+receipt for each action and stops at the human approval gate before any paid
+image generation.
 
-An agent driving this page cannot move the city, cannot invent a landmark, and
-cannot spend money without being told to. Those are properties of the page, not
-promises about the model.
+### A better user experience
 
-### What people and agents can do together now
+Without WebMCP, an assistant would have to guess from pixels or automate
+fragile controls. Here it receives named, typed capabilities and compact
+structured results. A person can see the same state, source attribution,
+verification counts, geometry hashes, and approval boundary the agent sees.
+The interface also has a manual fallback, so the product remains usable in a
+browser that does not yet expose WebMCP.
 
-A person picks a place and says what the map is for. An assistant works out
-what that kind of map needs, marks the real instances from OpenStreetMap, and
-leaves a visible receipt for every action it took. When the data does not
-support the request, both of them find out — which is the outcome a map is
-supposed to give you.
+### What people and agents do together
+
+- The person chooses the real place, states the purpose, and approves cost.
+- The agent turns that intent into a sequence of explicit browser-tool calls.
+- OpenStreetMap supplies locations and geometry.
+- MapTruth rejects unsupported places, verifies the locked evidence, and
+  records tool receipts.
+- The image model styles the evidence; it does not supply the evidence.
+
+### How it was built
+
+MapTruth is a React and TypeScript application built with Vite. MapLibre GL JS
+renders the live map. Nominatim resolves the requested city; Overpass provides
+nearby OpenStreetMap features. The browser integration registers ten WebMCP
+tools with JSON schemas, annotations, bounded outputs, and untrusted-content
+hints. Vercel Functions proxy the external services and image generation.
+
+Examples use checked-in snapshots captured from the same live pipeline so a
+demo does not stall on a public service. A separate verification script launches
+installed Chrome with WebMCP enabled, discovers all ten tools through
+`document.modelContext.getTools()`, and executes `inspect_map_context` through
+the browser's own `document.modelContext.executeTool()`.
+
+### Challenges
+
+The difficult part was not drawing a map. It was defining a trust boundary an
+agent could not casually cross: the model can name candidates but cannot set a
+coordinate; geometry must belong to the current locked place; stale locks must
+be rejected; and paid generation must require visible human approval. Public
+geocoding and Overpass services also vary in latency, so the experience needed
+deterministic examples without pretending they were a separate data path.
+
+### Accomplishments
+
+- Ten discoverable WebMCP tools operate a real map workflow rather than a toy
+  counter or hidden demo route.
+- Native discovery and execution are tested in installed Chrome, with no
+  mocked model context in the production verifier.
+- Every generated comparison has a visible source line and OpenStreetMap
+  inspection link.
+- Agent activity is legible to the person and stops before cost.
+- The same app remains usable manually when WebMCP is unavailable.
+
+### What I learned
+
+Reliable agent UX comes from moving important guarantees out of prompts and
+into the page's tool contract. Structured tools make collaboration clearer,
+but the strongest result comes from deliberately limiting each participant:
+the model names, OpenStreetMap locates, the page verifies, and the person
+decides.
+
+### What's next
+
+Next I would add saved, shareable evidence bundles; compare OpenStreetMap
+changes over time; and support more source layers while keeping the same
+provenance contract. The most useful extension is not more autonomous drawing,
+but better ways to inspect why a place was accepted or rejected.
 
 ### Honest limits
 
-OpenStreetMap records what exists, not what is famous, and its coverage of
-small businesses varies by city. A brief asking for "the best" of something in
-a thinly-mapped area will verify few of its suggestions. That is visible in the
-interface on purpose: an unverifiable place is not placed.
+MapTruth verifies that generation received geometry derived from the current
+OpenStreetMap view. It does not claim that every generated pixel is
+cartographically exact or that OpenStreetMap is perfectly complete or current.
+The prompt-only image is deliberately untrusted. Example snapshots are marked
+as snapshots; typing a new city exercises the live service path.
 
-### Built during the submission period
+### Built during the challenge
 
-Repository created 26 August 2026, first commit the same day. All work is in
-dated commits from 26 August onward.
-
----
+The repository was created on August 26, 2026 and its first commit is dated the
+same day, after the challenge submission period opened on August 25. The full
+implementation history is visible in the public commit log.
 
 ## Testing instructions
 
-No login, no credentials, nothing to install.
+No login, credentials, browser extension, or paid action is required.
 
-1. Open <https://map-truth.vercel.app> in Chrome with WebMCP enabled
-   (`chrome://flags/#enable-webmcp-testing`), or in ChatGPT's in-app browser.
-   The header reads **Agent mode · 10 tools** when the browser exposes WebMCP,
-   and **Manual mode** when it does not — the app works either way.
-2. Click **New York landmarks & subway**, then **Make both maps**. Generation
-   takes about a minute for the pair.
-3. The three example buttons replay an OpenStreetMap snapshot checked into the
-   repository, so a demo cannot stall on a public service having a bad minute.
-   The panel says so while one is active. **Type your own city and brief** to
-   exercise the live path: geocoder, model plan, and Overpass lookups all run,
-   which takes roughly fifteen seconds.
-4. To drive it as an agent would, open the agent panel from the header badge
-   and run the tools directly. `npm run verify:webmcp` asks the browser's own
-   `document.modelContext.getTools()` what the page registered, and prints the
-   ten names.
+1. Open <https://map-truth.vercel.app> in ChatGPT's in-app browser, or in
+   Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled and Chrome
+   relaunched.
+2. Confirm the header reads **Agent mode · 10 tools**. Open that badge to see
+   all ten registered tools.
+3. Select a preloaded example, such as **New York landmarks & subway**. The
+   example replays a checked-in OpenStreetMap snapshot from the live pipeline,
+   so it loads immediately and clearly labels itself as a snapshot.
+4. In the agent panel, click **Watch an assistant do it**. The walkthrough
+   calls six registered tools through native `executeTool()` when WebMCP is
+   available, shows each result, and stops at the generation approval gate.
+5. To exercise live services, type a city and brief instead. Nominatim,
+   planning, and Overpass resolution may take several seconds.
+6. For a terminal-level native check, clone the repository, run `npm install`,
+   then `npm run verify:webmcp`. It launches installed Chrome, discovers all ten
+   tools, executes the read-only `inspect_map_context` tool, and verifies the
+   on-page agent-mode badge.
 
-Worth trying, because it is the whole argument: a brief asking for "the best"
-of something. The model suggests real names from its own knowledge, every one
-is looked up in OpenStreetMap, and the ones that cannot be found are counted
-and dropped rather than placed approximately.
+The generated-image button is not needed to judge WebMCP execution. If used,
+it presents estimated cost and requires explicit human approval first.
+
+## Final video record
+
+The public 1:38 video uses one New Orleans example and has audio explaining the
+problem, the working comparison, and how WebMCP is used.
+
+- 0:00 — live app and the problem
+- 0:42 — prompt-only versus grounded New Orleans comparison
+- 1:12 — registered WebMCP tools and human approval boundary

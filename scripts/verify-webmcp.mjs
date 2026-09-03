@@ -4,9 +4,10 @@
  *
  * Launches the installed Google Chrome with the WebMCP feature enabled (the
  * command-line equivalent of chrome://flags/#enable-webmcp-testing), loads the
- * app, and asks the browser's own `document.modelContext.getTools()` what the
- * page registered. Nothing here is mocked: if this passes, an agent in a
- * WebMCP-capable browser sees exactly these nine tools.
+ * app, asks the browser's own `document.modelContext.getTools()` what the page
+ * registered, then invokes a read-only tool through `executeTool()`. Nothing
+ * here is mocked: if this passes, a WebMCP-capable browser can both discover
+ * and execute the page's tools.
  *
  *   npm run verify:webmcp                    # against production
  *   npm run verify:webmcp -- http://…:4174   # against a local build
@@ -75,6 +76,22 @@ try {
   JSON.stringify(readOnly) === JSON.stringify(['inspect_comparison', 'inspect_map_context'])
     ? pass('only the two inspect tools claim readOnlyHint')
     : fail(`readOnlyHint set on: ${readOnly.join(', ') || '(none)'}`)
+
+  const invocation = await page.evaluate(async () => {
+    const registered = await document.modelContext.getTools()
+    const inspect = registered.find((tool) => tool.name === 'inspect_map_context')
+    const modelContext = document.modelContext
+    if (!inspect) return { error: 'inspect_map_context was not discovered' }
+    if (typeof modelContext.executeTool !== 'function') return { error: 'document.modelContext.executeTool is unavailable' }
+    const raw = await modelContext.executeTool(inspect, JSON.stringify({ detail: 'summary' }))
+    const result = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return { result }
+  })
+  invocation.error
+    ? fail(invocation.error)
+    : invocation.result?.status === 'ok' && typeof invocation.result?.featureCount === 'number'
+      ? pass(`inspect_map_context executed through WebMCP (${invocation.result.featureCount} source-backed features)`)
+      : fail(`inspect_map_context returned ${JSON.stringify(invocation.result)}`)
 
   // The badge is the claim a visitor actually sees, so check the rendered one.
   const badge = (await page.locator('.agent-mode').first().textContent({ timeout: 15_000 }).catch(() => null))?.trim()

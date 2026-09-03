@@ -6,18 +6,20 @@
 
 ### → [map-truth.vercel.app](https://map-truth.vercel.app)
 
+### → [98-second public demo](https://youtu.be/cMuCQtug00M)
+
 Ask any image model for a map of somewhere real and it invents the streets — confidently, beautifully, with a legend and emergency numbers. Fine for wall art. Dangerous for a protest route, an evacuation plan or a delivery zone.
 
 MapTruth gives the model a sourced view of the actual place instead. Choose a place, write a brief, and an agent locks the OSM-derived viewport, resolves markers through OpenStreetMap, and hands that evidence over. Same prompt, both ways.
 
-![The same prompt with and without a real map](public/example/comparison.jpg)
+![The same New Orleans brief with and without a real map](public/example/new-orleans-comparison.jpg)
 
-Both images came from *"Protest safety map — DPR Jakarta. Show gathering points and medical posts."*
+Both images came from *"Wide-area city resilience overview. Mark medical facilities, public parks, and transit stops across New Orleans."*
 
-- **Left, ungrounded.** Gathering points, medical posts, road closures, emergency numbers, an official-looking DPR RI seal. Every location in it is invented. Someone planning from it goes to the wrong places.
-- **Right, grounded.** A generative redraw made from the sourced street layout around the parliament complex. Its legend is built from names resolved inside the locked view: Lapangan Panahan, Lapangan Tennis MPR Senayan, Taman Kridaloka, Posyandu RW 02, RSAL dr. Mintohardjo, Kimia Farma. The source line records coordinates and OSM-derived shapes and links to OpenStreetMap for inspection.
+- **Left, ungrounded.** A model drew a plausible-looking New Orleans from the prompt alone. Its streets, labels, and spatial relationships are generated rather than sourced.
+- **Right, grounded.** A generative redraw made from the locked OpenStreetMap view. The defining relationship between Lake Pontchartrain, the city, and the crescent of the Mississippi remains visible; its marked places came from OpenStreetMap results inside that view.
 
-MapTruth read the brief, decided it needed gathering points and medical posts, asked OpenStreetMap where those actually are near the parliament, and marked them on the map *before* handing it over. The model styled a sourced map instead of starting from imagination. MapTruth verifies the evidence it received, not the cartographic precision of every generated pixel.
+MapTruth read the brief, decided it needed medical facilities, parks, and transit, asked OpenStreetMap where those actually are, and marked them on the map *before* handing it over. The model styled a sourced map instead of starting from imagination. MapTruth verifies the evidence it received, not the cartographic precision of every generated pixel.
 
 The dangerous one is the prettier one. That is the whole problem.
 
@@ -57,10 +59,11 @@ ok    all 10 tools registered and discoverable
 ok    every tool publishes an input schema
 ok    every tool describes itself
 ok    only the two inspect tools claim readOnlyHint
+ok    inspect_map_context executed through WebMCP (… source-backed features)
 ok    the page reports "Agent mode · 10 tools"
 ```
 
-**Watch an assistant do it** on the page runs those same functions in the open, for browsers without WebMCP — not a mock of the tools, the tools, with their real receipts and the same cost gate.
+**Watch an assistant do it** uses the browser's native `executeTool()` path when WebMCP is available. In a browser without WebMCP it falls back to the same underlying functions, still leaving real receipts and stopping at the same cost gate.
 
 ### Enabling agent mode
 
@@ -125,3 +128,12 @@ Unit tests cover tile classification, viewport clipping and budgeting, stable lo
 GitHub Actions runs lint, type-check, unit tests, build, and desktop/mobile Chromium on pushes and PRs to `main`; failures upload traces and screenshots. Vercel's Git integration deploys passing `main` revisions.
 
 MapTruth verifies provenance against the OSM-derived geometry available to the current runtime. It does not claim OpenStreetMap is perfectly complete or current.
+
+## Challenge provenance
+
+MapTruth was created during the WebMCP Challenge submission period. The repository's first commit is dated August 26, 2026, after the submission period opened on August 25, and the complete implementation history remains visible in the [public commit log](https://github.com/rzrizaldy/map-truth/commits/main/). The submission materials are:
+
+- [live project](https://map-truth.vercel.app)
+- [public 98-second demo](https://youtu.be/cMuCQtug00M)
+- [testing and submission notes](docs/submission.md)
+- [MIT license](LICENSE)

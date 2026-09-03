@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { extractPlaceMentions } from '../map/places'
-import { walkthroughSteps, announceWalkthrough, type WalkthroughStep } from '../webmcp/walkthrough'
+import { walkthroughSteps, announceWalkthrough, runWalkthroughStep, type WalkthroughStep } from '../webmcp/walkthrough'
 import { useAppStore } from '../state/store'
 import type { ToolResult } from '../types/maptruth'
 
@@ -44,7 +44,7 @@ export function AgentWalkthrough() {
       setSteps((current) => current.map((entry, i) => (i === index ? { ...entry, status: 'running' } : entry)))
       let result: ToolResult
       try {
-        result = await plan[index].run()
+        result = await runWalkthroughStep(plan[index])
       } catch (error) {
         // A throwing tool used to leave the walkthrough spinning forever with
         // nothing on screen to say why.

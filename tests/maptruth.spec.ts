@@ -383,6 +383,43 @@ test('the agent drawer runs the real tools and stops at the cost gate', async ({
   await expect(page.locator('.agent-step').filter({ hasText: 'mark_from_osm' })).toContainText('marked')
 })
 
+test('the visible walkthrough invokes registered tools through native executeTool', async ({ page }) => {
+  await page.addInitScript(() => {
+    type Registered = { name: string; execute: (input: unknown) => unknown }
+    const registered: Registered[] = []
+    const calls: string[] = []
+    Object.defineProperty(document, 'modelContext', {
+      configurable: true,
+      value: {
+        registerTool: async (tool: Registered) => { registered.push(tool) },
+        getTools: async () => registered,
+        executeTool: async (tool: Registered, input: string) => {
+          calls.push(tool.name)
+          return JSON.stringify(await tool.execute(JSON.parse(input)))
+        },
+      },
+    })
+    ;(window as unknown as { __nativeCalls: string[] }).__nativeCalls = calls
+  })
+  await stubPlace(page)
+  await stubMarking(page,
+    [{ key: 'medical', label: 'Medical', colour: '#ea4335' }],
+    [{ category: 'medical', label: 'Medical', colour: '#ea4335', name: 'Posyandu', center: [106.7946, -6.2103], osmId: 'osm:n1' }])
+
+  await page.goto('/')
+  await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
+  await settled(page)
+  await page.locator('.agent-toggle').click()
+  await page.getByRole('button', { name: /^Run the agent on / }).click()
+  await expect(page.locator('.agent-step--done')).toHaveCount(6, { timeout: 120_000 })
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __nativeCalls: string[] }).__nativeCalls,
+  )).toEqual([
+    'focus_place', 'inspect_map_context', 'lock_live_osm',
+    'mark_from_osm', 'verify_geography', 'generate_comparison',
+  ])
+})
+
 test('an agent can navigate and lock through WebMCP alone', async ({ page }) => {
   await page.addInitScript(() => {
     const registered: Array<{ name: string; execute: (input: unknown) => unknown }> = []
