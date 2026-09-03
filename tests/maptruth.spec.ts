@@ -5,6 +5,13 @@ const JAKARTA = {
   center: [106.80029, -6.2102083], bbox: [106.79, -6.22, 106.81, -6.2], zoom: 14.6, kind: 'office',
 }
 
+const LOWER_MANHATTAN = {
+  name: 'Lower Manhattan',
+  label: 'Lower Manhattan, Manhattan, New York County, New York, 10000, United States',
+  center: [-74.0054261, 40.7135482], bbox: [-74.0154261, 40.7035482, -73.9954261, 40.7235482],
+  zoom: 13.86, kind: 'quarter',
+}
+
 /**
  * Most tests need a destination without depending on Nominatim being up, and
  * without paying for a live lookup on every keystroke.
@@ -405,15 +412,15 @@ test('the visible walkthrough invokes registered tools through native executeToo
     ;(window as unknown as { __nativeCalls: string[] }).__nativeCalls = calls
     ;(window as unknown as { __nativeInputs: unknown[] }).__nativeInputs = inputs
   })
-  await stubPlace(page)
+  await stubPlace(page, LOWER_MANHATTAN)
   await stubMarking(page,
     [{ key: 'medical', label: 'Medical', colour: '#ea4335' }],
     [{ category: 'medical', label: 'Medical', colour: '#ea4335', name: 'Posyandu', center: [106.7946, -6.2103], osmId: 'osm:n1' }])
 
   await page.goto('/')
   await expect(page.locator('[data-map-loaded="true"]')).toBeVisible({ timeout: 45_000 })
-  await settled(page)
-  await page.locator('.ask-input').fill('Landmarks and subway map. Mark the sights and nearest stations.')
+  await page.getByRole('button', { name: /New York landmarks & subway/ }).click()
+  await expect(page.locator('.place-chosen')).toContainText(LOWER_MANHATTAN.name, { timeout: 30_000 })
   await page.locator('.agent-toggle').click()
   await page.getByRole('button', { name: /^Run the agent on / }).click()
   await expect(page.locator('.agent-step--done')).toHaveCount(6, { timeout: 120_000 })
@@ -425,7 +432,8 @@ test('the visible walkthrough invokes registered tools through native executeToo
   ])
   await expect.poll(() => page.evaluate(() =>
     (window as unknown as { __nativeInputs: Array<{ place?: string }> }).__nativeInputs[0],
-  )).toEqual({ place: JAKARTA.name })
+  )).toEqual({ place: LOWER_MANHATTAN.name })
+  await expect(page.locator('.agent-step').filter({ hasText: 'mark_from_osm' })).toContainText('12 marked')
 })
 
 test('an agent can navigate and lock through WebMCP alone', async ({ page }) => {

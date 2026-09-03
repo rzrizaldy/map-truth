@@ -4,6 +4,8 @@ import { getMapRuntime } from '../map/runtime'
 import { geocodePlace } from '../map/geocode'
 import type { GeocodedPlace } from '../map/placeTypes'
 import { syncOverlays } from '../map/overlays'
+import { EXAMPLES } from '../map/examples'
+import { applyPreloadedScenario, CAPTURED_AT, preloadFor } from '../map/preload'
 import { geometryHashMatches, geometryHashMatchesSync } from '../lib/hash'
 import { exportRouteImage } from '../poster/export'
 import { addActivity, appStore } from '../state/store'
@@ -258,13 +260,20 @@ export const markFromOsm = async (): Promise<ToolResult> => {
   if (!state.data.lock) {
     return { status: 'needs_user_action', reason: 'live_osm_lock_required', suggestedAction: 'lock_live_osm' }
   }
-  await syncOverlays()
+  const example = EXAMPLES.find((candidate) => candidate.prompt === state.ai.prompt)
+  const snapshot = example ? preloadFor(example.label) : undefined
+  const snapshotMatchesPlace = snapshot && (
+    snapshot.place.name === state.place.name || snapshot.place.label === state.place.label
+  )
+  if (snapshotMatchesPlace) applyPreloadedScenario(snapshot, 'webmcp')
+  else await syncOverlays()
   const after = appStore.getState()
   return {
     status: 'ok',
     categories: after.overlayCategories.map((category) => category.label),
     markers: after.overlays.map((marker) => ({ kind: marker.label, name: marker.name, center: marker.center, osmId: marker.osmId })),
     markerCount: after.overlays.length,
+    ...(snapshotMatchesPlace ? { snapshot: true, capturedAt: CAPTURED_AT } : {}),
   }
 }
 

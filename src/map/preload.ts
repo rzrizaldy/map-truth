@@ -36,7 +36,7 @@ export const preloadFor = (label: string): PreloadedScenario | undefined => scen
  * button that says "example" is the one that is fast, and the box that invites
  * a stranger's own city is the one that really asks.
  */
-export const applyPreloadedScenario = (scenario: PreloadedScenario) => {
+export const applyPreloadedScenario = (scenario: PreloadedScenario, source: 'system' | 'webmcp' = 'system') => {
   appStore.setState({
     overlayCategories: scenario.categories,
     overlays: scenario.markers,
@@ -48,5 +48,5 @@ export const applyPreloadedScenario = (scenario: PreloadedScenario) => {
   addActivity('mark_from_osm', 'ok',
     `${scenario.markers.length} real ${scenario.categories.map((category) => category.label.toLowerCase()).join(' / ')}`
     + ` from a saved OpenStreetMap snapshot (${CAPTURED_AT})`,
-    { source: 'system' })
+    { source })
 }
