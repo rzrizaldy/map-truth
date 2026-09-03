@@ -5,6 +5,7 @@ import { EXAMPLES } from '../map/examples'
 import { geocodePlace } from '../map/geocode'
 import { planOverlays, syncOverlays, type Plan } from '../map/overlays'
 import { clearNamedPlaces, resolveNamedPlaces } from '../map/namedPlaces'
+import { applyPreloadedScenario, CAPTURED_AT, preloadFor } from '../map/preload'
 import { syncTruthPins } from '../map/pinSync'
 import { generateComparisonManually } from '../ai/generation'
 import { focusResolvedPlace } from '../webmcp/commands'
@@ -29,6 +30,9 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
   const [plan, setPlan] = useState<Plan & { forPrompt: string }>({ forPrompt: '', categories: [], places: [] })
   // Two plans can be in flight after a quick edit; only the current one counts.
   const planTicket = useRef(0)
+  // The brief a snapshot already answers. Edit the brief and it no longer
+  // matches, so the live path takes over on its own — no flag to reset.
+  const [replayedFor, setReplayedFor] = useState('')
 
   // The lock must belong to the place that was chosen. Without this a stale
   // lock from a previous place will happily ground the next brief — which is
@@ -49,6 +53,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   const clear = () => {
     setChosen(undefined)
+    setReplayedFor('')
     clearNamedPlaces()
     appStore.setState((state) => ({
       data: { status: 'idle', features: [], verificationStatus: 'idle' },
@@ -64,10 +69,22 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   const applyExample = async (example: typeof EXAMPLES[number]) => {
     appStore.setState((state) => ({ ai: { ...state.ai, prompt: example.prompt } }))
-    const found = await geocodePlace(example.place)
-    if (found.ok) void choose(found.place)
+    const ready = preloadFor(example.label)
+    if (!ready) {
+      setReplayedFor('')
+      const found = await geocodePlace(example.place)
+      if (found.ok) void choose(found.place)
+      return
+    }
+    // Answer the brief from the snapshot before moving, so the panel never
+    // shows a spinner for work that is already done.
+    setPlan({ forPrompt: example.prompt, categories: ready.categories, places: ready.suggested })
+    setReplayedFor(example.prompt)
+    applyPreloadedScenario(ready)
+    await choose(ready.place)
   }
 
+  const replaying = Boolean(prompt.trim()) && replayedFor === prompt
   // Whether the plan is stale is derivable from which brief it was made for.
   const planning = Boolean(prompt.trim()) && plan.forPrompt !== prompt
   // Stable identity so the marking effect does not re-fire every render.
@@ -82,7 +99,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
 
   // Read what the brief asks the map to show, independent of where it is.
   useEffect(() => {
-    if (!prompt.trim()) return
+    if (!prompt.trim() || replaying) return
     const ticket = ++planTicket.current
     const timer = window.setTimeout(async () => {
       const next = await planOverlays(prompt, chosen?.label)
@@ -90,7 +107,7 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
       setPlan({ forPrompt: prompt, ...next })
     }, 650)
     return () => window.clearTimeout(timer)
-  }, [prompt, chosen?.label])
+  }, [prompt, chosen?.label, replaying])
 
   // Mark once we have both a place and a plan for it.
   const lockId = data.lock?.id
@@ -100,11 +117,13 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
     if (!lockId || !lockedHere || planning) return
     const timer = window.setTimeout(() => {
       void syncTruthPins()
+      // The snapshot already holds the answer these two would go and fetch.
+      if (replaying) return
       void syncOverlays(planned)
       void resolveNamedPlaces(suggested)
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [lockId, lockedHere, planning, planned, suggested])
+  }, [lockId, lockedHere, planning, planned, suggested, replaying])
 
   const marking = overlayStatus === 'planning' || overlayStatus === 'finding' || namedStatus === 'finding'
 
@@ -218,6 +237,12 @@ export function StageAsk({ onGenerate }: { onGenerate: () => void }) {
                   </i>
                 )) : <em className="readback-muted">just the place itself</em>}
               </span>
+              {replaying ? (
+                <span className="readback-line readback-muted">
+                  Replayed from a saved OpenStreetMap snapshot ({CAPTURED_AT}) so
+                  the example cannot stall. Type your own brief for a live lookup.
+                </span>
+              ) : null}
               {enhancing && waitedLongEnough ? (
                 <span className="readback-line readback-line--warn">
                   OpenStreetMap is slow right now — you can go ahead, the map is

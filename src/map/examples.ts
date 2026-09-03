@@ -23,9 +23,13 @@ export const EXAMPLES: Example[] = [
     note: 'Real landmarks and stations, where they actually are',
   },
   {
-    label: 'Pittsburgh bike trail',
-    place: 'Pittsburgh',
-    prompt: 'Bike trail map. Show parks and places to refill water along the way.',
-    note: 'Trail-side parks and water, from OpenStreetMap',
+    // The hero. Pittsburgh is three rivers meeting at a point, so a poster
+    // drawn from vibes is caught by its own geometry before anyone reads the
+    // legend — and POGOH docks are in OpenStreetMap under their real corner
+    // names, which is a legend a stranger can check against the street.
+    label: 'Pittsburgh POGOH bike share',
+    place: 'Downtown Pittsburgh',
+    prompt: 'POGOH bike share map. Mark the stations and the riverfront parks along the way.',
+    note: 'Real POGOH docks, where the three rivers meet',
   },
 ]

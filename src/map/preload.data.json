@@ -1,0 +1,160 @@
+{
+  "capturedAt": "2026-09-03",
+  "scenarios": {
+    "Pittsburgh POGOH bike share": {
+      "place": {
+        "name": "Downtown",
+        "label": "Downtown, Pittsburgh, Allegheny County, Pennsylvania, United States",
+        "center": [
+          -80.0025678,
+          40.4406971
+        ],
+        "bbox": [
+          -80.0132624,
+          40.433983,
+          -79.9849874,
+          40.447105
+        ],
+        "zoom": 14.04,
+        "kind": "quarter"
+      },
+      "categories": [
+        {
+          "key": "bike",
+          "label": "Bike",
+          "colour": "#0b8043"
+        },
+        {
+          "key": "park",
+          "label": "Park",
+          "colour": "#34a853"
+        }
+      ],
+      "suggested": [],
+      "markers": [
+        {
+          "category": "bike",
+          "label": "Bike",
+          "colour": "#0b8043",
+          "name": "POGOH - Penn Avenue & 7th Street",
+          "center": [
+            -79.9999501,
+            40.443362
+          ],
+          "osmId": "osm:n11988984769"
+        },
+        {
+          "category": "bike",
+          "label": "Bike",
+          "colour": "#0b8043",
+          "name": "POGOH - Ross Street & Fourth Avenue",
+          "center": [
+            -79.9964345,
+            40.4377487
+          ],
+          "osmId": "osm:n12316408620"
+        },
+        {
+          "category": "bike",
+          "label": "Bike",
+          "colour": "#0b8043",
+          "name": "POGOH - Forbes Avenue & Market Square",
+          "center": [
+            -80.0033508,
+            40.4408897
+          ],
+          "osmId": "osm:n12588334080"
+        },
+        {
+          "category": "bike",
+          "label": "Bike",
+          "colour": "#0b8043",
+          "name": "POGOH - 10th Street & Penn Avenue",
+          "center": [
+            -79.9958115,
+            40.4446504
+          ],
+          "osmId": "osm:n11988990175"
+        },
+        {
+          "category": "bike",
+          "label": "Bike",
+          "colour": "#0b8043",
+          "name": "POGOH -",
+          "center": [
+            -80.0090847,
+            40.4457543
+          ],
+          "osmId": "osm:n12588334078"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "Mellon Square",
+          "center": [
+            -79.9974679,
+            40.4409259
+          ],
+          "osmId": "osm:w125393460"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "Point State Park",
+          "center": [
+            -80.0101087,
+            40.4415137
+          ],
+          "osmId": "osm:w387635995"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "North Shore Riverfront Park",
+          "center": [
+            -80.012163,
+            40.4454458
+          ],
+          "osmId": "osm:r18247220"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "Emerald View Park",
+          "center": [
+            -80.0117359,
+            40.4294591
+          ],
+          "osmId": "osm:r11100892"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "7th and Penn Parklet",
+          "center": [
+            -80.0001347,
+            40.443448
+          ],
+          "osmId": "osm:w672990102"
+        },
+        {
+          "category": "park",
+          "label": "Park",
+          "colour": "#34a853",
+          "name": "Triangle Park",
+          "center": [
+            -80.0021786,
+            40.4416355
+          ],
+          "osmId": "osm:w413715523"
+        }
+      ],
+      "named": []
+    }
+  }
+}

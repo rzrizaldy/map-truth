@@ -41,6 +41,11 @@ export async function POST(request: Request): Promise<Response> {
     const { text } = await generateText({
       model: model(),
       abortSignal: AbortSignal.timeout(18_000),
+      // Picking from a fixed menu of thirteen keys is classification, not
+      // reasoning, and the default effort spent nearly all of the eighteen
+      // seconds thinking about it — often enough to miss the deadline
+      // entirely, which showed up as briefs that marked nothing at all.
+      providerOptions: { openai: { reasoningEffort: 'low', textVerbosity: 'low' } },
       system:
         'You decide what a map should mark, given a brief about a place.\n\n' +
         'Reply with JSON only, shaped {"categories": [...], "places": [...]}.\n\n' +
